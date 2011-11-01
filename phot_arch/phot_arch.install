@@ -1,0 +1,197 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the phot_arch module.
+ */
+
+/**
+ * Implements hook_install().
+ *
+ * In Drupal 7, there is no need to install schema using this hook, the schema
+ * is already installed before this hook is called.
+ *
+ * We will create a default entry in the database.
+ *
+ * @see hook_install()
+ * @ingroup phot_arch
+ */
+function phot_arch_install() {
+  // Outside of the .install file we would use drupal_write_record() to
+  // populate the database, but it cannot be used here, so we'll use
+  // db_insert().
+
+  // Add a default entry.
+  $fields = array(
+    'name'    => 'BL Lacertae',
+    'NEDlink' => 'http://ned.ipac.caltech.edu/cgi-bin/nph-objsearch?objname=bl+lacertae&extend=no&hconst=73&omegam=0.27&omegav=0.73&corr_z=1&out_csys=Equatorial&out_equinox=J2000.0&obj_sort=RA+or+Longitude&of=pre_text&zv_breaker=30000.0&list_limit=5&img_stamp=YES',
+  );
+  db_insert('phot_arch_objects')
+    ->fields($fields)
+    ->execute();
+
+  // Add another entry.
+  $fields = array(
+    'name'    => 'OJ 287',
+    'NEDlink' => 'http://ned.ipac.caltech.edu/cgi-bin/nph-objsearch?objname=OJ+287&extend=no&hconst=73&omegam=0.27&omegav=0.73&corr_z=1&out_csys=Equatorial&out_equinox=J2000.0&obj_sort=RA+or+Longitude&of=pre_text&zv_breaker=30000.0&list_limit=5&img_stamp=YES',
+  );
+  db_insert('phot_arch_objects')
+    ->fields($fields)
+    ->execute();
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * As in hook_install, there is no need to uninstall schema, Drupal will do it
+ * for us.
+ *
+ * @see hook_uninstall()
+ * @ingroup phot_arch
+ */
+function phot_arch_uninstall() {
+  // nothing.
+}
+
+
+/**
+ * Implements hook_schema().
+ *
+ * Defines the database tables used by this module.
+ * Remember that the easiest way to create the code for hook_schema is with
+ * the @link http://drupal.org/project/schema schema module @endlink
+ *
+ * @see hook_schema()
+ * @ingroup phot_arch
+ */
+function phot_arch_schema() {
+
+  $schema['phot_arch_objects'] = array(
+    'description' => 'Stores blazars names and additional info.',
+    'fields' => array(
+      'id'  => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique blazar ID.',
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'Name of the blazar.',
+      ),
+      'NEDlink' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => 'http://ned.ipac.caltech.edu/',
+        'description' => 'URL of the NASA NED page for the object.',
+      ),
+    ),
+    'primary key' => array('id'),
+    'indexes' => array(
+      'name'    => array('name'),
+      'NEDlink' => array('NEDlink')
+    ),
+  );
+
+  $schema['phot_arch_papers'] = array(
+    'description' => 'Stores data sources.',
+    'fields' => array(
+      'id'  => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique paper ID.',
+      ),
+      'author_year' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Name of the first author and year of publication.',
+      ),
+      'bibtex' => array(
+        'type' => 'varchar',
+        'length' => 2048,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Bibtex entry for the paper',
+      )
+    ),
+    'primary key' => array('id'),
+    'indexes' => array(
+      'author_year' => array('author_year'),
+      'bibtex'      => array('bibtex')
+    ),
+  );
+
+  $schema['phot_arch_data'] = array(
+    'description' => 'Stores photometry data.',
+    'fields' => array(
+      'id'  => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique data point ID.',
+      ),
+      'creator_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "Creator user's {users}.uid",
+      ),
+      'blazar_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => "Blazar ID from {phot_arch_objects}.id",
+      ),
+      'JD' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Julian date of the observation.',
+      ),
+      'band' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'Band of the observation.',
+      ),
+      'mag' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Stellar magnitude.',
+      ),
+      'mag_err' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Stellar magnitude error.',
+      ),
+      'paper_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => 'ID of the paper where we stole the data point {phot_arch_papers}.id.',
+      )
+    ),
+    'primary key' => array('id'),
+    'indexes' => array(
+      'JD'         => array('JD'),
+      'band'       => array('band'),
+      'mag'        => array('mag'),
+      'mag_err'    => array('mag_err')
+    ),
+    'foreign keys' => array(
+      'blazar_id' => array(
+        'table'   => 'phot_arch_objects',
+        'columns' => array('blazar_id' => 'id'),
+      ),
+      'paper_id' => array(
+        'table'   => 'phot_arch_papers',
+        'columns' => array('paper_id' => 'id'),
+      ),
+      'creator_id' => array(
+        'table'   => 'users',
+        'columns' => array('creator_id' => 'uid'),
+      ),
+    ),
+  );
+
+  return $schema;
+}

@@ -1,0 +1,7 @@
+name = Photometry archive
+description = Module allowing to save and extract archival photometry data.
+package = VO
+core = 7.x
+files[] = phot_arch.test
+
+
