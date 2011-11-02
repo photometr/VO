@@ -97,16 +97,10 @@ function phot_arch_schema() {
   $schema['phot_arch_papers'] = array(
     'description' => 'Stores data sources.',
     'fields' => array(
-      'id'  => array(
-        'type' => 'serial',
-        'not null' => TRUE,
-        'description' => 'Primary Key: Unique paper ID.',
-      ),
       'author_year' => array(
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
-        'default' => '',
         'description' => 'Name of the first author and year of publication.',
       ),
       'bibtex' => array(
@@ -117,9 +111,8 @@ function phot_arch_schema() {
         'description' => 'Bibtex entry for the paper',
       )
     ),
-    'primary key' => array('id'),
+    'primary key' => array('author_year'),
     'indexes' => array(
-      'author_year' => array('author_year'),
       'bibtex'      => array('bibtex')
     ),
   );
@@ -164,10 +157,11 @@ function phot_arch_schema() {
         'not null' => TRUE,
         'description' => 'Stellar magnitude error.',
       ),
-      'paper_id' => array(
-        'type' => 'int',
+      'author_year' => array(
+        'type' => 'varchar',
+        'length' => 255,
         'not null' => TRUE,
-        'description' => 'ID of the paper where we stole the data point {phot_arch_papers}.id.',
+        'description' => 'Name of the first author and year of publication.',
       )
     ),
     'primary key' => array('id'),
@@ -182,9 +176,9 @@ function phot_arch_schema() {
         'table'   => 'phot_arch_objects',
         'columns' => array('blazar_id' => 'id'),
       ),
-      'paper_id' => array(
+      'author_year' => array(
         'table'   => 'phot_arch_papers',
-        'columns' => array('paper_id' => 'id'),
+        'columns' => array('author_year' => 'author_year'),
       ),
       'creator_id' => array(
         'table'   => 'users',

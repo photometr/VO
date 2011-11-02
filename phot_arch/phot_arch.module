@@ -187,14 +187,49 @@ function phot_arch_entry_insert($entry) {
     $mag[]     = floatval($one_line[1]); //FIXME who understands comma as delimeter
     $mag_err[] = floatval($one_line[2]);
   }
+  
+  $blazar_id = $entry['blazar_name'] + 1; //FIXME dangerous
+  $author_year = $entry['author'].$entry['year']; //TODO add checking for duplicates
+  $paper_entry = array(
+    'author_year' => $author_year,
+    'bibtex'      => $entry['bibtex'],
+  );
 
-  $return_value = NULL;
+  $trans_value = db_transaction();
   try {
-    $return_value = db_insert('phot_arch')
-                    ->fields($entry)
+    //write new article
+    //FIXME add checking of duplications
+    $return_value = db_insert('phot_arch_papers')
+                    ->fields($paper_entry)
                     ->execute();
+    //fill data table
+    for ( $i = 0; $i < count($JD); $i += 1) {
+      $data_entries[] = array(
+        'creator_id'  => $user->uid,
+        'blazar_id'   => $blazar_id,
+        'JD'          => $JD[$i],
+        'band'        => $entry['band'],
+        'mag'         => $mag[$i],
+        'mag_err'     => $mag_err[$i],
+        'author_year' => $author_year // Such a stupid way since they don't have foreing keys
+      );
+    }
+    $query = db_insert('phot_arch_data')->fields(array(
+                                          'creator_id',
+                                          'blazar_id',
+                                          'JD',
+                                          'band',
+                                          'mag',
+                                          'mag_err',
+                                          'author_year'
+                                          ));
+    foreach ($data_entries as $data_entry) {
+      $query->values($data_entry);
+    }
+    $query->execute();
   }
   catch (Exception $e) {
+    $trans_value->rollback();
     drupal_set_message(t('db_insert failed. Message = %message, query= %query',
       array('%message' => $e->getMessage(), '%query' => $e->query_string)), 'error');
   }
