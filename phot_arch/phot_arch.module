@@ -54,7 +54,7 @@ function phot_arch_menu() {
 
   $items['VO/phot_arch'] = array(
     'title' => 'Archival photometry database',
-    'page callback' => 'dbtng_example_list',
+    'page callback' => 'phot_arch_get_data',
     'access callback' => TRUE,
   );
   $items['VO/phot_arch/get_data'] = array(
@@ -72,6 +72,42 @@ function phot_arch_menu() {
   );
 
   return $items;
+}
+
+function phot_arch_entry_load($entry = array()) {
+  // Read all fields from the phot_arch_data table.
+  $select = db_select('phot_arch_data', 'c');
+  $select->fields('c');
+
+  // Add each field and value as a condition to this query.
+  foreach ($entry as $field => $value) {
+    $select->condition($field, $value);
+  }
+  // Return the result in object format.
+  return $select->execute()->fetchAll();
+}
+
+/**
+ * Render a list of entries in the database.
+ */
+function phot_arch_get_data() {
+  $output = '';
+
+  // Get all entries in the dbtng_example table.
+  if ($entries = phot_arch_entry_load()) {
+    $rows = array();
+    foreach ($entries as $entry) {
+      // Sanitize the data before handing it off to the theme layer.
+      $rows[] = array_map('check_plain', (array) $entry);
+    }
+    // Make a table for them.
+    $header = array(t('id'),t('creator_id'),t('blazar_id'),t('JD'), t('band'), t('mag'), t('mag_err'), t('author_year'));
+    $output .= theme('table', array('header' => $header, 'rows' => $rows));
+  }
+  else {
+    drupal_set_message(t('No entries have been added yet.'));
+  }
+  return $output;
 }
 
 function blazars_list_load() {
