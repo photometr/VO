@@ -54,7 +54,8 @@ function phot_arch_menu() {
 
   $items['VO/phot_arch'] = array(
     'title' => 'Archival photometry database',
-    'page callback' => 'phot_arch_get_data',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('phot_arch_form_get'),
     'access callback' => TRUE,
   );
   $items['VO/phot_arch/get_data'] = array(
@@ -74,19 +75,19 @@ function phot_arch_menu() {
   return $items;
 }
 
-function phot_arch_entry_load($entry = array()) {
-  // Read all fields from the phot_arch_data table.
-  $select = db_select('phot_arch_data', 'c');
-  $select->fields('c');
-
-  // Add each field and value as a condition to this query.
-  foreach ($entry as $field => $value) {
-    $select->condition($field, $value);
-  }
-  // Return the result in object format.
-  return $select->execute()->fetchAll();
-}
-
+// function phot_arch_entry_load($entry = array()) {
+//   // Read all fields from the phot_arch_data table.
+//   $select = db_select('phot_arch_data', 'c');
+//   $select->fields('c');
+// 
+//   // Add each field and value as a condition to this query.
+//   foreach ($entry as $field => $value) {
+//     $select->condition($field, $value);
+//   }
+//   // Return the result in object format.
+//   return $select->execute()->fetchAll();
+// }
+// 
 /**
  * Render a list of entries in the database.
  */
@@ -108,6 +109,153 @@ function phot_arch_get_data() {
     drupal_set_message(t('No entries have been added yet.'));
   }
   return $output;
+}
+
+/**
+ * Query to the database to get data.
+ */
+function phot_arch_data_load($form, $form_state) {
+  $blazar_id = $form_state['values']['name'] + 1; //FIXME dangerous
+  $band      = $form_state['values']['band'];
+  $JDstart   = $form_state['values']['JDstart'];
+  $JDend     = $form_state['values']['JDend'];
+
+  if (empty($JDstart)) $JDstart = 0;
+  if (empty($JDend))   $JDend   = 2490000; //Just a big number
+
+  // Read all fields from the phot_arch_data table.
+  $select = db_select('phot_arch_data', 'c');
+  $select->fields('c')
+         ->condition('blazar_id', $blazar_id,'=')
+         ->condition('JD', $JDstart,'>=')
+         ->condition('JD', $JDend,'<=');
+
+  if (!empty($band)) {
+    $select->condition('band', $band,'=');
+  }
+
+  // Return the result in object format.
+  return $select->execute()->fetchAll();
+}
+
+
+function phot_arch_file_download($filename, $mimetype='application/octet-stream') {
+  if (file_exists($filename)) {
+    header($_SERVER["SERVER_PROTOCOL"] . ' 200 OK');
+    header('Content-Type: ' . $mimetype);
+    header('Last-Modified: ' . gmdate('r', filemtime($filename)));
+    header('ETag: ' . sprintf('%x-%x-%x', fileinode($filename), filesize($filename), filemtime($filename)));
+    header('Content-Length: ' . (filesize($filename)));
+    header('Connection: close');
+    header('Content-Disposition: attachment; filename="' . basename($filename) . '";');
+// Открываем искомый файл
+    $f=fopen($filename, 'r');
+    while(!feof($f)) {
+// Читаем килобайтный блок, отдаем его в вывод и сбрасываем в буфер
+      echo fread($f, 1024);
+      flush();
+    }
+// Закрываем файл
+    fclose($f);
+  } else {
+    header($_SERVER["SERVER_PROTOCOL"] . ' 404 Not Found');
+    header('Status: 404 Not Found');
+  }
+  exit;
+}
+
+/**
+ * Get ascii data from the database.
+ */
+function phot_arch_form_get_ASCII_submit($form, &$form_state) {
+  //obtaining response from DB
+  if ($entries = phot_arch_data_load($form, $form_state)) {
+    $rows = array();
+    foreach ($entries as $entry) {
+      $variables = get_object_vars($entry);
+      $row_el = $variables["jd"]." ".$variables["mag"]." ".$variables["mag_err"];
+      $row_el = $row_el." ".$variables["author_year"]."\n";
+      $rows[] = $row_el;
+    }
+  }
+  else {
+    drupal_set_message(t('No entries in DB available for this query.'));
+  }
+  $output = "";
+  foreach ($rows as $row) {
+    $output = $output.$row;
+  }
+  //creating a file with data
+  $filepath = file_unmanaged_save_data($output, $destination = "public://", $replace = FILE_EXISTS_REPLACE);
+  phot_arch_file_download($filepath);
+}
+
+/**
+ * Prepare a simple form to get data, with all the interesting fields.
+ */
+function phot_arch_form_get($form, &$form_state) {
+  $form = array();
+
+  $form = array(
+    '#prefix' => '<div id="updateform">',
+    '#suffix' => '</div>',
+  );
+  $form['name'] = array(
+    '#type' => 'select',
+    '#options' => blazars_list_load(),
+    '#title' => t('Choose blazar name:'),
+  );
+  $form['band'] = array(
+    '#type'  => 'textfield',
+    '#title' => t('Band:'),
+    '#description' => t('Hint: Leave blank if you need all available.'),
+    '#size'  => 2,
+  );
+  $form['JDstart'] = array(
+    '#type'  => 'textfield',
+    '#title' => t('JD start:'),
+    '#description' => t('Hint: Leave blank if no limits required.'),
+    '#size'  => 10,
+  );
+  $form['JDend'] = array(
+    '#type'  => 'textfield',
+    '#title' => t('JD end:'),
+    '#size'  => 10,
+  );
+  $form['ASCII'] = array(
+    '#type' => 'submit',
+    '#value' => t('Get ASCII'),
+    '#submit' => array('phot_arch_form_get_ASCII_submit'),
+  );
+  $form['VOT'] = array(
+    '#type' => 'submit',
+    '#value' => t('Get VOT'),
+    '#submit' => array('phot_arch_form_get_VOT_submit'),
+  );
+  $form['bibtex'] = array(
+    '#type' => 'submit',
+    '#value' => t('Get Bibtex'),
+    '#submit' => array('phot_arch_form_get_bibtex_submit'),
+  );
+  return $form;
+}
+
+/**
+ * Custom validation form for the 'get data' page.
+ *
+ * @ingroup VO
+ */
+function phot_arch_form_get_validate($form, &$form_state) {
+  if (!empty($form_state['values']['JDstart'])) {
+    if (!is_numeric($form_state['values']['JDstart'])) {
+      form_set_error('JD', t('JD start must be numeric.'));
+    }
+  }
+  if (!empty($form_state['values']['JDend'])) {
+    if (!is_numeric($form_state['values']['JDend'])) {
+      form_set_error('JD', t('JD end must be numeric.'));
+    }
+  }
 }
 
 function blazars_list_load() {
