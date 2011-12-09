@@ -37,6 +37,27 @@ function phot_arch_install() {
   db_insert('phot_arch_objects')
     ->fields($fields)
     ->execute();
+  $fields = array(
+    'name'    => 'S5 0716+71',
+    'NEDlink' => '',
+  );
+  db_insert('phot_arch_objects')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'name'    => '3C 454.3',
+    'NEDlink' => '',
+  );
+  db_insert('phot_arch_objects')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'name'    => '3C 273',
+    'NEDlink' => '',
+  );
+  db_insert('phot_arch_objects')
+    ->fields($fields)
+    ->execute();
 }
 
 /**

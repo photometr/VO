@@ -34,11 +34,15 @@ function phot_arch_help($path) {
   $output = '';
   switch ($path) {
     case 'VO/phot_arch':
-      $output = t('Here you can obtain archival data for blazars.');
-      $output .= t('La La La.');
+      $output = t('Здесь вы можете скачать фотометрические и поляриметрические данные для избранных блазаров, ');
+      $output .= t('которые были получены в различных обсерваториях и опубликованы в статьях.');
       break;
     case 'VO/phot_arch/add':
-      $output = t('Only registered users are able to add data.');
+      $output = t('Только определённые пользователи могут добавлять данные.
+                  Обратитесь к <a href="mailto:dmitriy.blinov@gmail.com">администратору</a>, если хотите помочь проекту.');
+      break;
+    case 'VO/phot_arch/list':
+      $output = t('Here you can find some more links for archives.');
       break;
   }
   return $output;
@@ -53,27 +57,43 @@ function phot_arch_menu() {
   $items = array();
 
   $items['VO/phot_arch'] = array(
-    'title' => 'Archival photometry database',
+    'title' => 'Архив фотометрических данных',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('phot_arch_form_get'),
     'access callback' => TRUE,
   );
   $items['VO/phot_arch/get_data'] = array(
-    'title' => 'Get Data',
+    'title' => 'Получить данные',
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
   $items['VO/phot_arch/add'] = array(
-    'title' => 'Add data',
+    'title' => 'Добавить данные',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('phot_arch_form_add'),
     'access callback' => TRUE,
     'type' => MENU_LOCAL_TASK,
     'weight' => -9,
   );
-
+  //$items['VO/phot_arch/list'] = array(
+  //  'title' => 'Other archives',
+  //  'page callback' => 'drupal_get_form',
+  //  'page arguments' => array('phot_arch_form_list'),
+  //  'access callback' => TRUE,
+  //  'type' => MENU_NORMAL_ITEM,
+  //  'weight' => -8,
+  //);
   return $items;
 }
+
+/**
+ * Just a simple list with other catalogs.
+ */
+//function phot_arch_form_list($form, &$form_state) {
+
+  //return $output;
+//}
+
 
 // function phot_arch_entry_load($entry = array()) {
 //   // Read all fields from the phot_arch_data table.
@@ -203,38 +223,38 @@ function phot_arch_form_get($form, &$form_state) {
   $form['name'] = array(
     '#type' => 'select',
     '#options' => blazars_list_load(),
-    '#title' => t('Choose blazar name:'),
+    '#title' => t('Имя блазара:'),
   );
   $form['band'] = array(
     '#type'  => 'textfield',
-    '#title' => t('Band:'),
-    '#description' => t('Hint: Leave blank if you need all available.'),
+    '#title' => t('Полоса:'),
+    '#description' => t('Оставьте пустым, если нужны все доступные полосы'),
     '#size'  => 2,
   );
   $form['JDstart'] = array(
     '#type'  => 'textfield',
-    '#title' => t('JD start:'),
-    '#description' => t('Hint: Leave blank if no limits required.'),
+    '#title' => t('От JD:'),
+    '#description' => t('Оставьте пустым, если нужен весь массив'),
     '#size'  => 10,
   );
   $form['JDend'] = array(
     '#type'  => 'textfield',
-    '#title' => t('JD end:'),
+    '#title' => t('До JD:'),
     '#size'  => 10,
   );
   $form['ASCII'] = array(
     '#type' => 'submit',
-    '#value' => t('Get ASCII'),
+    '#value' => t('Скачать ASCII'),
     '#submit' => array('phot_arch_form_get_ASCII_submit'),
   );
   $form['VOT'] = array(
     '#type' => 'submit',
-    '#value' => t('Get VOT'),
+    '#value' => t('Скачать VOT'),
     '#submit' => array('phot_arch_form_get_VOT_submit'),
   );
   $form['bibtex'] = array(
     '#type' => 'submit',
-    '#value' => t('Get Bibtex'),
+    '#value' => t('Скачать Bibtex'),
     '#submit' => array('phot_arch_form_get_bibtex_submit'),
   );
   return $form;
@@ -278,41 +298,41 @@ function phot_arch_form_add($form, &$form_state) {
   $form['name'] = array(
     '#type' => 'select',
     '#options' => blazars_list_load(),
-    '#title' => t('Choose blazar name:'),
+    '#title' => t('Выберите имя блазара:'),
   );
   $form['band'] = array(
     '#type'  => 'textfield',
-    '#title' => t('Band:'),
+    '#title' => t('Фотометрическая полоса:'),
     '#size'  => 2,
   );
   $form['published'] = array(
     '#type'  => 'fieldset',
-    '#title' => t('Who and when published the data:'),
+    '#title' => t('Кто и когда опубликовал данные:'),
   );
   $form['published']['author'] = array(
     '#type'  => 'textfield',
-    '#title' => t('Author'),
+    '#title' => t('Автор'),
     '#size'  => 15,
   );
   $form['published']['year'] = array(
     '#type'  => 'textfield',
-    '#title' => t('Year'),
+    '#title' => t('Год'),
     '#size'  => 15,
   );
   $form['data'] = array(
     '#type'  => 'textarea',
-    '#title' => 'Data:<br>in the following form "Julian_date Magnitude Magnitude_error',
+    '#title' => 'Данные:<br>в следующем формате "JD зв.величина ошибка зв.величины"',
     '#size'  => 15,
-    '#description' => t('use 999 if error is undefined'),
+    '#description' => t('используйте 999, если ошибка наблюдений неизвестна'),
   );
   $form['bibtex'] = array(
     '#type'  => 'textarea',
-    '#title' => 'Bibtex entry for the source:',
+    '#title' => 'Bibtex для работы откуда получены данные:',
     '#size'  => 15,
   );
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Update'),
+    '#value' => t('Загрузить'),
   );
 
   return $form;
