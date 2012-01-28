@@ -61,6 +61,7 @@ function phot_arch_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('phot_arch_form_get'),
     'access callback' => TRUE,
+    'file' => 'ajax_dep_dropdown.inc'
   );
   $items['VO/phot_arch/get_data'] = array(
     'title' => 'Получить данные',
@@ -213,7 +214,8 @@ function phot_arch_form_get_ASCII_submit($form, &$form_state) {
 /**
  * Prepare a simple form to get data, with all the interesting fields.
  */
-function phot_arch_form_get($form, &$form_state) {
+function old_phot_arch_form_get($form, &$form_state) {//FIXME remove it!!!!!!!!!!!!
+//old version without AJAX
   $form = array();
 
   $form = array(
@@ -224,6 +226,10 @@ function phot_arch_form_get($form, &$form_state) {
     '#type' => 'select',
     '#options' => blazars_list_load(),
     '#title' => t('Имя блазара:'),
+    '#ajax' => array(
+      'callback' => 'ajax_example_dependent_dropdown_callback',
+      'wrapper' => 'dropdown-second-replace',
+    ),
   );
   $form['band'] = array(
     '#type'  => 'textfield',
@@ -278,10 +284,24 @@ function phot_arch_form_get_validate($form, &$form_state) {
   }
 }
 
+/** Loading list of blazar names from DB */
 function blazars_list_load() {
   // Read all fields from the phot_arch_objects table.
+  $result = db_query('SELECT id,name FROM phot_arch_objects');
+  $entries = $result->fetchAll();
+  $blazars_with_id = array();
+  foreach ($entries as $entry) {
+    $blazars_with_id[$entry->id] = $entry->name;
+  }
+  return $blazars_with_id;
+}
 
-  $result = db_query('SELECT name FROM phot_arch_objects');
+/** Loading list of filters(bands) for which we have
+ a data in the DB for a given blazar, that was selected
+ in the first dropdown list */
+function bands_list_load($blazar_id) {
+  // Read 'band' field for $blazar_name from the 'phot_arch_data' table.
+  $result = db_query("SELECT DISTINCT band FROM phot_arch_data WHERE blazar_id = '".$blazar_id."'");
   return $result->fetchCol();
 }
 
@@ -392,7 +412,7 @@ function phot_arch_entry_insert($entry) {
     $mag_err[] = floatval($one_line[2]);
   }
   
-  $blazar_id = $entry['blazar_name'] + 1; //FIXME dangerous
+  $blazar_id = $entry['blazar_name'];
   $author_year = $entry['author'].$entry['year']; //TODO add checking for duplicates
   $paper_entry = array(
     'author_year' => $author_year,
