@@ -35,7 +35,29 @@
  * ways to call this form, one normal ($no_js_use = FALSE) and one simulating
  * Javascript disabled ($no_js_use = TRUE).
  */
-function phot_arch_form_get($form, &$form_state) {
+function phot_arch_spbu_form_get($form, &$form_state) {
+  //check if user allowed to add the database
+  global $user;
+  if (! in_array("phot_db_maintainer", $user->roles)) {
+    $error_text = '<font size="3" color="red">Только зарегистрированные пользователи имеют доступ к данным!</font>';
+    $form['access_fieldset'] = array(
+      '#type' => 'fieldset',
+      '#title' => t($error_text),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    return $form;
+  }
+  //drupal_add_js('misc/jscharts/jquery.min.js');
+  ////drupal_add_js('misc/jscharts/plot.js');
+  //drupal_add_js('misc/jscharts/jquery.jqplot.min.js');
+  //drupal_add_js('misc/jscharts/jqplot.dateAxisRenderer.min.js');
+  //drupal_add_js('misc/jscharts/jqplot.cursor.min.js');
+  //drupal_add_js('misc/jscharts/jqplot.highlighter.min.js');
+  //drupal_add_js('misc/jscharts/jquery.jqplot.min.css');
+  drupal_add_js('misc/dygraphs/dygraph-dev.js');
+  //drupal_add_js('misc/dygraphs/data.js');
+  //drupal_add_js('misc/dygraphs/plot_js.js');
   // Get the list of options to populate the first dropdown.
   $blazars_names = blazars_list_load();
 
@@ -45,10 +67,10 @@ function phot_arch_form_get($form, &$form_state) {
   // second dropdown.
   $selected = isset($form_state['values']['name']) ? $form_state['values']['name'] : key($blazars_names);
 
-  $form = array(
-    '#prefix' => '<div id="main-replace">',
-    '#suffix' => '</div>',
-  );
+  //$form = array(
+  //  '#prefix' => '<div id="main-replace">',
+  //  '#suffix' => '</div>',
+  //);
 
   $form['name_fieldset'] = array(
     '#type' => 'fieldset',
@@ -84,52 +106,58 @@ function phot_arch_form_get($form, &$form_state) {
     '#default_value' => isset($form_state['values']['band']) ? $form_state['values']['band'] : '',
     '#ajax' => array(
       'callback' => 'ajax_band_dropdown_callback',
-      'wrapper' => 'dropdown-second-replace',
+      'wrapper' => 'JD-replace',
     ),
   );
-  $form['band_fieldset']['JDstart'] = array(
+  $form['JD_fieldset'] = array(
+    '#type' => 'fieldset',
+    '#prefix' => '<div id="JD-replace">',
+    '#suffix' => '</div>',
+  );
+  $form['JD_fieldset']['JDstart'] = array(
     '#type'  => 'textfield',
     '#title' => t('От JD:'),
     '#size'  => 10,
     '#attributes' => array('class' => array('enabled-for-ajax')),
-    '#value' => isset($form_state['values']['band']) ? $form_state['values']['band'] : '',
+    //'#value' => isset($form_state['values']['band']) ? $form_state['values']['band'] : '',
     '#default_value' => '',
   );
-  $form['band_fieldset']['JDend'] = array(
+  $form['JD_fieldset']['JDend'] = array(
     '#type'  => 'textfield',
     '#title' => t('До JD:'),
     '#size'  => 10,
   );
-  $form['band_fieldset']['ASCII'] = array(
+  $form['JD_fieldset']['plot'] = array(
+    '#prefix' => '<div id="plot_div">',
+    '#suffix' => '</div>',
+    //'#markup' => get_plot_code($form, $form_state),
+    //'#markup' => '<div id="chart3" style="margin-top:20px; margin-left:20px; width:500px; height:300px;"></div>',
+    '#attributes' => array('class' => array('enabled-for-ajax')),
+  );
+  $form['JD_fieldset']['ASCII'] = array(
     '#type' => 'submit',
     '#value' => t('Скачать ASCII'),
-    '#submit' => array('phot_arch_form_get_ASCII_submit'),
+    '#submit' => array('phot_arch_spbu_form_get_ASCII_submit'),
     // This class allows attached js file to override the disabled attribute,
     // since it's not necessary in ajax-enabled form.
     '#attributes' => array('class' => array('enabled-for-ajax')),
   );
-  $form['band_fieldset']['VOT'] = array(
-    '#type' => 'submit',
-    '#value' => t('Скачать VOT'),
-    '#submit' => array('phot_arch_form_get_VOT_submit'),
-    '#attributes' => array('class' => array('enabled-for-ajax')),
-  );
-  $form['band_fieldset']['bibtex'] = array(
-    '#type' => 'submit',
-    '#value' => t('Скачать Bibtex'),
-    '#submit' => array('phot_arch_form_get_bibtex_submit'),
-    '#attributes' => array('class' => array('enabled-for-ajax')),
-  );
+  //$form['JD_fieldset']['VOT'] = array(
+  //  '#type' => 'submit',
+  //  '#value' => t('Скачать VOT'),
+  //  '#submit' => array('phot_arch_spbu_form_get_VOT_submit'),
+  //  '#attributes' => array('class' => array('enabled-for-ajax')),
+  //);
 
   // Disable band if a selection has not been made on dropdown_first.
   if (empty($form_state['values']['name'])) {
     $form['band_fieldset']['band']['#disabled'] = TRUE;
     $form['band_fieldset']['band']['#description'] = t('You must make your choice on the first dropdown before changing this second one.');
-    $form['band_fieldset']['JDstart']['#disabled'] = TRUE;
-    $form['band_fieldset']['JDend']['#disabled'] = TRUE;
-    $form['band_fieldset']['ASCII']['#disabled'] = TRUE;
-    $form['band_fieldset']['VOT']['#disabled'] = TRUE;
-    $form['band_fieldset']['bibtex']['#disabled'] = TRUE;
+    $form['JD_fieldset']['JDstart']['#disabled'] = TRUE;
+    $form['JD_fieldset']['JDend']['#disabled'] = TRUE;
+    $form['JD_fieldset']['ASCII']['#disabled'] = TRUE;
+    $form['JD_fieldset']['VOT']['#disabled'] = TRUE;
+    $form['JD_fieldset']['bibtex']['#disabled'] = TRUE;
   }
 
   return $form;
@@ -143,7 +171,8 @@ function phot_arch_form_get($form, &$form_state) {
  *   Renderable array (the second dropdown).
  */
 function ajax_name_dropdown_callback($form, $form_state) {
-  $form['band_fieldset']['JDstart']['#value'] = NULL;
+  //$form['band_fieldset']['JDstart']['#value'] = NULL;
+  //$form['band_fieldset']['plot']['#markup'] = get_plot_code();
   return $form['band_fieldset'];//['band'];
 }
 
@@ -154,7 +183,11 @@ function ajax_name_dropdown_callback($form, $form_state) {
  *   Renderable array (the second dropdown).
  */
 function ajax_band_dropdown_callback($form, $form_state) {
-  return $form['band_fieldset'];
+  $form['JD_fieldset']['plot']['#markup'] = get_plot_code($form, $form_state);
+  return $form['JD_fieldset'];
+//$commands = array();
+//$commands[] = ajax_command_replace('#plot_div', get_plot_code());
+//return array('#type' => 'ajax', '#commands' => $commands);
 }
 
 

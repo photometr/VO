@@ -1,0 +1,614 @@
+<?php
+/**
+ * @file
+ * This module works with archival data for selected blazars
+ *
+ *
+ * General documentation is available at
+ * @link database Database abstraction layer documentation @endlink and
+ * at @link http://drupal.org/node/310069 @endlink.
+ */
+
+/**
+ * @defgroup phot_arch_spbu
+ * @ingroup VO
+ * @{
+ * General documentation is available at
+ * @link database.inc database abstraction layer documentation @endlink and
+ * at @link http://drupal.org/node/310069 Database API @endlink.
+ *
+ */
+
+/**
+ * This function converts a string to a float no matter is the decimal separator dot (.)
+ * or comma (,). It also converts integers correctly. It takes the digits from the beginning
+ * of the string and ignores all other characters.
+ */
+
+/**
+ * Implements hook_help().
+ *
+ * Show some help on each form provided by this module.
+ */
+function phot_arch_spbu_help($path) {
+  $output = '';
+  switch ($path) {
+    case 'VO/phot_arch_spbu':
+      $output = t('Здесь вы можете скачать фотометрические и поляриметрические данные для избранных блазаров, ');
+      $output .= t('которые были получены в лаборатории наблюдательной астрофизики СПбГУ.');
+      break;
+    case 'VO/phot_arch_spbu/add':
+      $output = t('');
+      break;
+    case 'VO/phot_arch_spbu/list':
+      $output = t('Here you can find some more links for archives.');
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implements hook_menu().
+ *
+ * Set up calls to drupal_get_form() for all our example cases.
+ */
+function phot_arch_spbu_menu() {
+  $items = array();
+
+  $items['VO/phot_arch_spbu'] = array(
+    'title' => 'Архив фотометрических данных',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('phot_arch_spbu_form_get'),
+    'access callback' => TRUE,
+    'file' => 'ajax_dep_dropdown.inc'
+  );
+  $items['VO/phot_arch_spbu/get_data'] = array(
+    'title' => 'Получить данные',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['VO/phot_arch_spbu/add'] = array(
+    'title' => 'Добавить данные',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('phot_arch_spbu_form_add'),
+    'access callback' => TRUE,
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -9,
+  );
+  // See add_obj.inc.
+  $items['VO/phot_arch_spbu/add_object'] = array(
+    'title' => 'Добавить объект',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('phot_arch_spbu_form_add_object'),
+    'access callback' => TRUE,
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'add_obj.inc',
+    'weight' => -8,
+  );
+  //$items['VO/phot_arch_spbu/list'] = array(
+  //  'title' => 'Other archives',
+  //  'page callback' => 'drupal_get_form',
+  //  'page arguments' => array('phot_arch_spbu_form_list'),
+  //  'access callback' => TRUE,
+  //  'type' => MENU_NORMAL_ITEM,
+  //  'weight' => -8,
+  //);
+  return $items;
+}
+
+/**
+ * Just a simple list with other catalogs.
+ */
+//function phot_arch_spbu_form_list($form, &$form_state) {
+
+  //return $output;
+//}
+
+
+// function phot_arch_spbu_entry_load($entry = array()) {
+//   // Read all fields from the phot_arch_spbu_data table.
+//   $select = db_select('phot_arch_spbu_data', 'c');
+//   $select->fields('c');
+// 
+//   // Add each field and value as a condition to this query.
+//   foreach ($entry as $field => $value) {
+//     $select->condition($field, $value);
+//   }
+//   // Return the result in object format.
+//   return $select->execute()->fetchAll();
+// }
+// 
+/**
+ * Render a list of entries in the database.
+ */
+function phot_arch_spbu_get_data() {
+  $output = '';
+
+  // Get all entries in the dbtng_example table.
+  if ($entries = phot_arch_spbu_entry_load()) {
+    $rows = array();
+    foreach ($entries as $entry) {
+      // Sanitize the data before handing it off to the theme layer.
+      $rows[] = array_map('check_plain', (array) $entry);
+    }
+    // Make a table for them.
+    $header = array(t('id'),t('creator_id'),t('blazar_id'),t('JD'), t('band'), t('mag'), t('mag_err'));
+    $output .= theme('table', array('header' => $header, 'rows' => $rows));
+  }
+  else {
+    drupal_set_message(t('No entries have been added yet.'));
+  }
+  return $output;
+}
+
+/**
+ * Query to the database to get data for download.
+ */
+function phot_arch_spbu_data_load($form, $form_state) {
+  $blazar_id = $form_state['values']['name'];
+  $band      = $form_state['values']['band'];
+  $JDstart   = $form_state['values']['JDstart'];
+  $JDend     = $form_state['values']['JDend'];
+
+  if (empty($JDstart)) $JDstart = 0;
+  if (empty($JDend))   $JDend   = 2500000; //Just a big number
+
+  // Read all fields from the phot_arch_spbu_data table.
+  $select = db_select('phot_arch_spbu_data', 'c');
+  $select->fields('c')
+         ->condition('blazar_id', $blazar_id,'=')
+         ->condition('JD', $JDstart,'>=')
+         ->condition('JD', $JDend,'<=');
+
+  if (!empty($band)) {
+    $select->condition('band_id', $band,'=');
+  }
+  // Return the result in object format.
+  return $select->execute()->fetchAll();
+}
+
+
+function phot_arch_spbu_file_download($filename, $mimetype='application/octet-stream') {
+  if (file_exists($filename)) {
+    header($_SERVER["SERVER_PROTOCOL"] . ' 200 OK');
+    header('Content-Type: ' . $mimetype);
+    header('Last-Modified: ' . gmdate('r', filemtime($filename)));
+    header('ETag: ' . sprintf('%x-%x-%x', fileinode($filename), filesize($filename), filemtime($filename)));
+    header('Content-Length: ' . (filesize($filename)));
+    header('Connection: close');
+    header('Content-Disposition: attachment; filename="' . basename($filename) . '";');
+// Открываем искомый файл
+    $f=fopen($filename, 'r');
+    while(!feof($f)) {
+// Читаем килобайтный блок, отдаем его в вывод и сбрасываем в буфер
+      echo fread($f, 1024);
+      flush();
+    }
+// Закрываем файл
+    fclose($f);
+  } else {
+    header($_SERVER["SERVER_PROTOCOL"] . ' 404 Not Found');
+    header('Status: 404 Not Found');
+  }
+  exit;
+}
+
+/**
+ * Get ascii data from the database.
+ */
+function phot_arch_spbu_form_get_ASCII_submit($form, &$form_state) {
+  //obtaining response from DB
+  if ($entries = phot_arch_spbu_data_load($form, $form_state)) {
+    $rows = array();
+    foreach ($entries as $entry) {
+      //$variables = get_object_vars($entry);
+      $row_el = $entry->jd." ".$entry->mag." ".$entry->mag_err;
+      $row_el = $row_el." ".$entry->tel."\n";
+      $rows[] = $row_el;
+    }
+  }
+  else {
+    drupal_set_message(t('No entries in DB available for this query.'));
+  }
+  $output = "";
+  foreach ($rows as $row) {
+    $output = $output.$row;
+  }
+  $filter = $form['band_fieldset']['band']['#options'][$form_state['values']['band']];
+  $blazar_name = $form['name_fieldset']['name']['#options'][$form_state['values']['name']];
+  //creating a file with data
+  $filepath = file_unmanaged_save_data($output, $destination = "public://".$blazar_name.$filter.".dat", $replace = FILE_EXISTS_REPLACE);
+  phot_arch_spbu_file_download($filepath);
+}
+
+/**
+ * Prepare a simple form to get data, with all the interesting fields.
+ */
+function old_phot_arch_spbu_form_get($form, &$form_state) {//FIXME remove it!!!!!!!!!!!!
+//old version without AJAX
+  $form = array();
+
+  $form = array(
+    '#prefix' => '<div id="updateform">',
+    '#suffix' => '</div>',
+  );
+  $form['name'] = array(
+    '#type' => 'select',
+    '#options' => blazars_list_load(),
+    '#title' => t('Имя блазара:'),
+    '#ajax' => array(
+      'callback' => 'ajax_example_dependent_dropdown_callback',
+      'wrapper' => 'dropdown-second-replace',
+    ),
+  );
+  $form['band'] = array(
+    '#type'  => 'textfield',
+    '#title' => t('Полоса:'),
+    '#description' => t('Оставьте пустым, если нужны все доступные полосы'),
+    '#size'  => 2,
+  );
+  $form['JDstart'] = array(
+    '#type'  => 'textfield',
+    '#title' => t('От JD:'),
+    '#description' => t('Оставьте пустым, если нужен весь массив'),
+    '#size'  => 10,
+  );
+  $form['JDend'] = array(
+    '#type'  => 'textfield',
+    '#title' => t('До JD:'),
+    '#size'  => 10,
+  );
+  $form['ASCII'] = array(
+    '#type' => 'submit',
+    '#value' => t('Скачать ASCII'),
+    '#submit' => array('phot_arch_spbu_form_get_ASCII_submit'),
+  );
+  $form['VOT'] = array(
+    '#type' => 'submit',
+    '#value' => t('Скачать VOT'),
+    '#submit' => array('phot_arch_spbu_form_get_VOT_submit'),
+  );
+  return $form;
+}
+
+/**
+ * Custom validation form for the 'get data' page.
+ *
+ * @ingroup VO
+ */
+function phot_arch_spbu_form_get_validate($form, &$form_state) {
+  if (!empty($form_state['values']['JDstart'])) {
+    if (!is_numeric($form_state['values']['JDstart'])) {
+      form_set_error('JD', t('JD start must be numeric.'));
+    }
+  }
+  if (!empty($form_state['values']['JDend'])) {
+    if (!is_numeric($form_state['values']['JDend'])) {
+      form_set_error('JD', t('JD end must be numeric.'));
+    }
+  }
+}
+
+/** Loading list of blazar names from DB */
+function blazars_list_load() {
+  // Read all fields from the phot_arch_spbu_objects table.
+  $result = db_query('SELECT id,name FROM phot_arch_spbu_objects');
+  $entries = $result->fetchAll();
+  $blazars_with_id = array();
+  foreach ($entries as $entry) {
+    $blazars_with_id[$entry->id] = $entry->name;
+  }
+  return $blazars_with_id;
+}
+
+/** Loading list of filters(bands) for which we have
+ a data in the DB for a given blazar, that was selected
+ in the first dropdown list */
+function bands_list_load($blazar_id) {
+  // Read 'band' field for $blazar_name from the 'phot_arch_spbu_data' table.
+  $query = "SELECT distinct band, phot_arch_spbu_bands.id FROM phot_arch_spbu_data";
+  $query = $query." INNER JOIN phot_arch_spbu_bands ON phot_arch_spbu_data.band_id = phot_arch_spbu_bands.id";
+  $result = db_query($query." WHERE blazar_id = '".$blazar_id."'");
+  
+  //return $result->fetchCol();
+  $bands_with_id = array();
+  $entries = $result->fetchAll();
+  foreach ($entries as $entry){
+    $bands_with_id[$entry->id] = $entry->band;
+  }
+  return $bands_with_id;
+}
+
+/** Loading the whole list of filters(bands)
+*/
+function bands_list_load_all() {
+  // Read 'band' field for $blazar_name from the 'phot_arch_spbu_data' table.
+  $query = "SELECT distinct band, id FROM phot_arch_spbu_bands";
+  $result = db_query($query);
+
+  $bands_with_id = array();
+  $entries = $result->fetchAll();
+  foreach ($entries as $entry){
+    $bands_with_id[$entry->id] = $entry->band;
+  }
+  return $bands_with_id;
+}
+
+/** */
+function get_data_for_plot($blazar_id,$band,$polar) {
+  $query = "SELECT JD, mag FROM phot_arch_spbu_data WHERE blazar_id = '";
+  $query = $query.$blazar_id."' AND band_id = '".$band."'";
+  $entries = db_query($query)->fetchAll();
+  $js_data = '<script type="text/javascript">';
+  $js_data = $js_data.'function data_nolabel(){';
+  $js_data = $js_data.'return "" +';
+  if ($polar){
+    foreach ($entries as $entry){
+      $js_data = $js_data.'"'.$entry->jd.','.$entry->mag.'\n" + ';
+    }
+  }
+  else{
+    foreach ($entries as $entry){
+      $js_data = $js_data.'"'.$entry->jd.',-'.$entry->mag.'\n" + ';
+    }
+  }
+  $js_data = rtrim($js_data,' + ');
+  $js_data = $js_data.';}function data() {';
+  $js_data = $js_data.'return "Date,Magnitude\n" + data_nolabel();';
+  $js_data = $js_data.'}</script>';
+  return $js_data;
+}
+
+/** */
+function get_plot_code($form, $form_state) {
+  $blazar_id = $form_state['values']['name'];
+  $band      = $form_state['values']['band'];
+  //drupal_set_message($band, 'error');
+  $filter = $form['band_fieldset']['band']['#options'][$form_state['values']['band']];
+  if (($filter == "P") || ($filter == "PA") ){
+    $code = file_get_contents('./sites/all/modules/phot_arch_spbu/plot_js_pol');
+    $txt = get_data_for_plot($blazar_id,$band,True);
+  }
+  else{
+    $code = file_get_contents('./sites/all/modules/phot_arch_spbu/plot_js');
+    $txt = get_data_for_plot($blazar_id,$band,False);
+  }
+ //$code = file_get_contents('./sites/default/modules/phot_arch_spbu/javascript_plot');
+  
+  $code = $code.$txt;
+  $code = $code.'<div style="float: right; display: none">';
+  $code = $code.'<p>Zoomed: <span id="zoomed">False</span><p/>';
+  $code = $code.'<p>Zoomed X: <span id="zoomedX">False</span><p/>';
+  $code = $code.'<p>Zoomed Y: <span id="zoomedY">False</span><p/></div>';
+  //$code = $code.'<div id="div_g" style="width:600px; height:300px;"></div>';
+  $code = $code.'<div id="div_g" style="margin-top:20px; margin-bottom:20px; margin-left:20px; width:600px; height:300px;"></div>';
+  //drupal_set_message(t($code), 'error');
+  return $code;
+}
+
+/**
+ * Prepare a simple form to add data, with all the interesting fields.
+ */
+function phot_arch_spbu_form_add($form, &$form_state) {
+  //check if user allowed to add the database
+  global $user;
+  if (! in_array("phot_db_maintainer", $user->roles)) {
+    $error_text = '<font size="3" color="red">Только зарегистрированные пользователи имеют доступ к данным!</font>';
+    $form['access_fieldset'] = array(
+      '#type' => 'fieldset',
+      '#title' => t($error_text),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    return $form;
+  }
+  $form = array();
+
+  $form = array(
+    '#prefix' => '<div id="updateform">',
+    '#suffix' => '</div>',
+  );
+  $form['name'] = array(
+    '#type' => 'select',
+    '#options' => blazars_list_load(),
+    '#title' => t('Выберите имя блазара:'),
+  );
+  $form['band'] = array(
+    '#type'  => 'select',
+    '#options' => bands_list_load_all(),
+    '#title' => t('Фотометрическая полоса:'),
+  );
+  $form['data'] = array(
+    '#type'  => 'textarea',
+    '#title' => 'Данные:<br>в следующем формате "JD зв.величина ошибка_зв.величины телескоп"',
+    '#size'  => 15,
+    '#description' => t('используйте 999, если ошибка наблюдений неизвестна'),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Добавить'),
+  );
+
+  return $form;
+}
+
+/**
+ * Check if the "band" is already in the DB otherwise insert it
+ * returns "id" of the "band" in the "phot_arch_spbu_band" table
+ * @param $band
+ *   Just a string with a bandpass name
+ *
+ * @see db_insert()
+ */
+// function get_band_id($band){
+//   //FIXME add some handlings of $band like rstrip(" ")
+//   $query = "SELECT id FROM phot_arch_spbu_bands WHERE band = '".$band."'";
+//   $result = db_query($query);
+//   $id = $result->fetchCol();
+//   if (empty($id)){
+//     $ins_query ="INSERT INTO phot_arch_spbu_bands (band) VALUES ('".$band."')";
+//     db_query($ins_query);
+//     $result = db_query($query);
+//     $id = $result->fetchCol();
+//   }
+//   return $id[0];
+// }
+
+/**
+* Check if the JD is already in the table
+*/
+function id_in_table($JD,$band_id,$blazar_id) {
+  $query = "SELECT id FROM phot_arch_spbu_data WHERE JD = '".$JD."'";
+  $query = $query."AND band_id = '".$band_id."' AND blazar_id = '".$blazar_id."'";
+  $result = db_query($query)->fetchCol();
+  if ($result == NULL) return NULL;
+  return $result[0];
+}
+
+/**
+* Rewrite entry for given JD 
+*/
+function rewrite_entry($old_entry_id, $one_line, $user_id) {
+  $mag     = floatval($one_line[1]); //FIXME who understands comma as delimeter
+  $mag_err = floatval($one_line[2]);
+  $tel     = $one_line[3];
+  $query = "UPDATE phot_arch_spbu_data SET mag = '".$mag;
+  $query = $query."', mag_err = '".$mag_err."', tel = '".$tel;
+  $query = $query."', creator_id = '".$user_id."' WHERE id = '".$old_entry_id."'";
+  try {
+    db_query($query)->execute();
+  }
+  catch (Exception $e) {
+    $trans_value->rollback();
+    drupal_set_message(t('db_insert failed. Message = %message, query= %query',
+      array('%message' => $e->getMessage(), '%query' => $e->query_string)), 'error');
+  }
+  return 0;
+}
+
+/**
+ * Save an entry in the database.
+ *
+ * The underlying function is db_insert().
+ *
+ * In Drupal 6, this would have been:
+ * @code
+ *   db_query(
+ *     "INSERT INTO {phot_arch_spbu} (name, surname, age)
+ *       VALUES ('%s', '%s', '%d')",
+ *     $entry['name'],
+ *     $entry['surname'],
+ *     $entry['age']
+ *   );
+ * @endcode
+ *
+ * Exception handling is shown in this example. It could be simplified
+ * without the try/catch blocks, but since an insert will throw an exception
+ * and terminate your application if the exception is not handled, it is best
+ * to employ try/catch.
+ *
+ * @param $entry
+ *   An array containing all the fields of the database record.
+ *
+ * @see db_insert()
+ */
+function phot_arch_spbu_entry_insert($entry) {
+  global $user;
+  $n_new_rows = 0;
+  //check if user allowed to add the database
+  if (! in_array("phot_db_maintainer", $user->roles)) {
+    drupal_set_message(t('ask Admin to be added to phot_db_maintainer role'), 'error');
+    return NULL;
+  }
+
+  //parsing data
+  $data_arr = preg_split("/((?<!\\\|\r)\n)|((?<!\\\)\r\n)/", $entry['data']);
+  foreach ($data_arr as $value) {
+    $value = trim ($value);
+    if ($value == "") continue;
+    $one_line  = preg_split("/[\s,]+/", $value);
+    if (count($one_line) != 4) {
+      drupal_set_message(t('Data string length must be = 4'), 'error');
+      return NULL;
+    }
+    if (!(is_numeric($one_line[0]) &&
+          is_numeric($one_line[0]) &&
+          is_numeric($one_line[0]))) {
+      drupal_set_message(t('It seems that you give not numeric data or commas.'), 'error');
+      return NULL;
+    }
+    $blazar_id = $entry['blazar_name'];
+    $band_id = $entry['band'];
+    $old_entry_id = id_in_table($one_line[0],$band_id,$blazar_id);
+    if($old_entry_id != NULL){
+      rewrite_entry($old_entry_id, $one_line, $user->uid);
+      continue;
+    }
+    else{
+      $JD[]       = floatval($one_line[0]); //FIXME change it with smart function
+      $mag[]      = floatval($one_line[1]); //FIXME who understands comma as delimeter
+      $mag_err[]  = floatval($one_line[2]);
+      $tel[]      = $one_line[3];
+      $n_new_rows = $n_new_rows + 1;
+    }
+  }
+  
+  
+
+  if($n_new_rows < 1) return NULL;
+  $trans_value = db_transaction();
+  try {
+    //fill data table
+    for ( $i = 0; $i < count($JD); $i += 1) {
+        $data_entries[] = array(
+          'creator_id'  => $user->uid,
+          'blazar_id'   => $blazar_id,
+          'JD'          => $JD[$i],
+          'band_id'     => $band_id,
+          'mag'         => $mag[$i],
+          'mag_err'     => $mag_err[$i],
+          'tel'         => $tel[$i],
+        );
+    }
+    $query = db_insert('phot_arch_spbu_data')->fields(array(
+                                          'creator_id',
+                                          'blazar_id',
+                                          'JD',
+                                          'band_id',
+                                          'mag',
+                                          'mag_err',
+                                          'tel'
+                                          ));
+    foreach ($data_entries as $data_entry) {
+      $query->values($data_entry);
+    }
+    $query->execute();
+  }
+  catch (Exception $e) {
+    $trans_value->rollback();
+    drupal_set_message(t('db_insert failed. Message = %message, query= %query',
+      array('%message' => $e->getMessage(), '%query' => $e->query_string)), 'error');
+  }
+  return $query;
+}
+
+/**
+ * Submit handler for 'add entry' form.
+ */
+function phot_arch_spbu_form_add_submit($form, &$form_state) {
+  // Save the submitted entry.
+  $entry = array(
+    'blazar_name' => $form_state['values']['name'],
+    'band'        => $form_state['values']['band'],
+    'data'        => $form_state['values']['data']
+  );
+  $return = phot_arch_spbu_entry_insert($entry);
+  if ($return) {
+    //drupal_set_message(t("Created entry @entry", array('@entry' => print_r($entry, TRUE))));
+    drupal_set_message(t("Данные успешно добавлены"));
+  }
+}
+
+/**
+ * @} End of "defgroup phot_arch_spbu".
+ */

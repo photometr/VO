@@ -1,7 +1,7 @@
-name = Photometry archive
+name = Photometry archive SPbU data
 description = Module allowing to save and extract archival photometry data.
 package = VO
 core = 7.x
-files[] = phot_arch.test
+files[] = phot_arch_spbu.test
 
 

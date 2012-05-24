@@ -1,7 +1,7 @@
 <?php
 /**
  * @file
- * Install, update and uninstall functions for the phot_arch module.
+ * Install, update and uninstall functions for the phot_arch_spbu module.
  */
 
 /**
@@ -13,9 +13,9 @@
  * We will create a default entry in the database.
  *
  * @see hook_install()
- * @ingroup phot_arch
+ * @ingroup phot_arch_spbu
  */
-function phot_arch_install() {
+function phot_arch_spbu_install() {
   // Outside of the .install file we would use drupal_write_record() to
   // populate the database, but it cannot be used here, so we'll use
   // db_insert().
@@ -23,39 +23,99 @@ function phot_arch_install() {
   // Add a default entry.
   $fields = array(
     'name'    => 'BL Lacertae',
-    'NEDlink' => 'http://ned.ipac.caltech.edu/cgi-bin/nph-objsearch?objname=bl+lacertae&extend=no&hconst=73&omegam=0.27&omegav=0.73&corr_z=1&out_csys=Equatorial&out_equinox=J2000.0&obj_sort=RA+or+Longitude&of=pre_text&zv_breaker=30000.0&list_limit=5&img_stamp=YES',
   );
-  db_insert('phot_arch_objects')
+  db_insert('phot_arch_spbu_objects')
     ->fields($fields)
     ->execute();
 
   // Add another entry.
   $fields = array(
     'name'    => 'OJ 287',
-    'NEDlink' => 'http://ned.ipac.caltech.edu/cgi-bin/nph-objsearch?objname=OJ+287&extend=no&hconst=73&omegam=0.27&omegav=0.73&corr_z=1&out_csys=Equatorial&out_equinox=J2000.0&obj_sort=RA+or+Longitude&of=pre_text&zv_breaker=30000.0&list_limit=5&img_stamp=YES',
   );
-  db_insert('phot_arch_objects')
+  db_insert('phot_arch_spbu_objects')
     ->fields($fields)
     ->execute();
   $fields = array(
     'name'    => 'S5 0716+71',
-    'NEDlink' => '',
   );
-  db_insert('phot_arch_objects')
+  db_insert('phot_arch_spbu_objects')
     ->fields($fields)
     ->execute();
   $fields = array(
     'name'    => '3C 454.3',
-    'NEDlink' => '',
   );
-  db_insert('phot_arch_objects')
+  db_insert('phot_arch_spbu_objects')
     ->fields($fields)
     ->execute();
   $fields = array(
     'name'    => '3C 273',
-    'NEDlink' => '',
   );
-  db_insert('phot_arch_objects')
+  db_insert('phot_arch_spbu_objects')
+    ->fields($fields)
+    ->execute();
+
+  // Fill filters
+  $fields = array(
+    'id'    => '1',
+    'band' => 'B',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '2',
+    'band' => 'V',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '3',
+    'band' => 'Rс',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '4',
+    'band' => 'Iс',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '5',
+    'band' => 'J',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '6',
+    'band' => 'H',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '7',
+    'band' => 'K',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '8',
+    'band' => 'P',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '9',
+    'band' => 'PA',
+  );
+  db_insert('phot_arch_spbu_bands')
     ->fields($fields)
     ->execute();
 }
@@ -67,9 +127,9 @@ function phot_arch_install() {
  * for us.
  *
  * @see hook_uninstall()
- * @ingroup phot_arch
+ * @ingroup phot_arch_spbu
  */
-function phot_arch_uninstall() {
+function phot_arch_spbu_uninstall() {
   // nothing.
 }
 
@@ -82,11 +142,11 @@ function phot_arch_uninstall() {
  * the @link http://drupal.org/project/schema schema module @endlink
  *
  * @see hook_schema()
- * @ingroup phot_arch
+ * @ingroup phot_arch_spbu
  */
-function phot_arch_schema() {
+function phot_arch_spbu_schema() {
 
-  $schema['phot_arch_objects'] = array(
+  $schema['phot_arch_spbu_objects'] = array(
     'description' => 'Stores blazars names and additional info.',
     'fields' => array(
       'id'  => array(
@@ -100,45 +160,33 @@ function phot_arch_schema() {
         'not null' => TRUE,
         'description' => 'Name of the blazar.',
       ),
-      'NEDlink' => array(
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
-        'default' => 'http://ned.ipac.caltech.edu/',
-        'description' => 'URL of the NASA NED page for the object.',
-      ),
     ),
     'primary key' => array('id'),
     'indexes' => array(
       'name'    => array('name'),
-      'NEDlink' => array('NEDlink')
     ),
   );
 
-  $schema['phot_arch_papers'] = array(
-    'description' => 'Stores data sources.',
+  $schema['phot_arch_spbu_bands'] = array(
+    'description' => 'Stores bandpasses.',
     'fields' => array(
-      'author_year' => array(
-        'type' => 'varchar',
-        'length' => 255,
+      'id' => array(
+        'type' => 'serial',
         'not null' => TRUE,
-        'description' => 'Name of the first author and year of publication.',
+        'description' => 'Primary Key: Unique band ID.',
       ),
-      'bibtex' => array(
+      'band' => array(
         'type' => 'varchar',
         'length' => 2048,
         'not null' => TRUE,
         'default' => '',
-        'description' => 'Bibtex entry for the paper',
+        'description' => 'Bandpass name',
       )
     ),
-    'primary key' => array('author_year'),
-    'indexes' => array(
-      'bibtex'      => array('bibtex')
-    ),
+    'primary key' => array('id'),
   );
 
-  $schema['phot_arch_data'] = array(
+  $schema['phot_arch_spbu_data'] = array(
     'description' => 'Stores photometry data.',
     'fields' => array(
       'id'  => array(
@@ -155,18 +203,18 @@ function phot_arch_schema() {
       'blazar_id' => array(
         'type' => 'int',
         'not null' => TRUE,
-        'description' => "Blazar ID from {phot_arch_objects}.id",
+        'description' => "Blazar ID from {phot_arch_spbu_objects}.id",
       ),
       'JD' => array(
         'type' => 'float',
+        'size' => 'big',
         'not null' => TRUE,
         'description' => 'Julian date of the observation.',
       ),
-      'band' => array(
-        'type' => 'varchar',
-        'length' => 255,
+      'band_id' => array(
+        'type' => 'int',
         'not null' => TRUE,
-        'description' => 'Band of the observation.',
+        'description' => "Blazar ID from {phot_arch_spbu_bands}.id",
       ),
       'mag' => array(
         'type' => 'float',
@@ -178,28 +226,29 @@ function phot_arch_schema() {
         'not null' => TRUE,
         'description' => 'Stellar magnitude error.',
       ),
-      'author_year' => array(
+      'tel' => array(
         'type' => 'varchar',
-        'length' => 255,
+        'length' => 2048,
         'not null' => TRUE,
-        'description' => 'Name of the first author and year of publication.',
-      )
+        'default' => '',
+        'description' => 'Telescope name.',
+      ),
     ),
     'primary key' => array('id'),
     'indexes' => array(
       'JD'         => array('JD'),
-      'band'       => array('band'),
       'mag'        => array('mag'),
-      'mag_err'    => array('mag_err')
+      'mag_err'    => array('mag_err'),
+      'tel'        => array('tel'),
     ),
     'foreign keys' => array(
       'blazar_id' => array(
-        'table'   => 'phot_arch_objects',
+        'table'   => 'phot_arch_spbu_objects',
         'columns' => array('blazar_id' => 'id'),
       ),
-      'author_year' => array(
-        'table'   => 'phot_arch_papers',
-        'columns' => array('author_year' => 'author_year'),
+      'band_id' => array(
+        'table'   => 'phot_arch_spbu_bands',
+        'columns' => array('band_id' => 'id'),
       ),
       'creator_id' => array(
         'table'   => 'users',
