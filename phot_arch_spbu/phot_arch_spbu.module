@@ -334,7 +334,8 @@ function bands_list_load_all() {
   return $bands_with_id;
 }
 
-/** */
+/** Create javascript with data for dygraphs library
+*/
 function get_data_for_plot($blazar_id,$band,$polar) {
   $query = "SELECT JD, mag FROM phot_arch_spbu_data WHERE blazar_id = '";
   $query = $query.$blazar_id."' AND band_id = '".$band."'";
@@ -344,18 +345,19 @@ function get_data_for_plot($blazar_id,$band,$polar) {
   $js_data = $js_data.'return "" +';
   if ($polar){
     foreach ($entries as $entry){
-      $js_data = $js_data.'"'.$entry->jd.','.$entry->mag.'\n" + ';
+      $js_data = $js_data.'"'.$entry->JD.','.$entry->mag.'\n" + ';
     }
   }
   else{
     foreach ($entries as $entry){
-      $js_data = $js_data.'"'.$entry->jd.',-'.$entry->mag.'\n" + ';
+      $js_data = $js_data.'"'.$entry->JD.',-'.$entry->mag.'\n" + ';
     }
   }
   $js_data = rtrim($js_data,' + ');
   $js_data = $js_data.';}function data() {';
   $js_data = $js_data.'return "Date,Magnitude\n" + data_nolabel();';
   $js_data = $js_data.'}</script>';
+
   return $js_data;
 }
 
