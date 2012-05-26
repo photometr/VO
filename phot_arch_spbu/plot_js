@@ -29,7 +29,8 @@
                   }
                  }
               },
-              
+              ylabel: 'Magnitude',
+              xlabel: 'JD',
               drawCallback: function(me, initial) {
                 document.getElementById("zoomed").innerHTML = "" + me.isZoomed();
                 document.getElementById("zoomedX").innerHTML = "" + me.isZoomed("x");

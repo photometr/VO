@@ -142,9 +142,9 @@ function phot_arch_spbu_get_data() {
 }
 
 /**
- * Query to the database to get data for download.
+ * Query to the database to get photometric data for download.
  */
-function phot_arch_spbu_data_load($form, $form_state) {
+function phot_arch_spbu_data_load_phot($form, $form_state) {
   $blazar_id = $form_state['values']['name'];
   $band      = $form_state['values']['band'];
   $JDstart   = $form_state['values']['JDstart'];
@@ -163,6 +163,28 @@ function phot_arch_spbu_data_load($form, $form_state) {
   if (!empty($band)) {
     $select->condition('band_id', $band,'=');
   }
+  // Return the result in object format.
+  return $select->execute()->fetchAll();
+}
+
+/**
+ * Query to the database to get polarimetric data for download.
+ */
+function phot_arch_spbu_data_load_polar($form, $form_state) {
+  $blazar_id = $form_state['values']['name'];
+  $JDstart   = $form_state['values']['JDstart'];
+  $JDend     = $form_state['values']['JDend'];
+
+  if (empty($JDstart)) $JDstart = 0;
+  if (empty($JDend))   $JDend   = 2500000; //Just a big number
+
+  // Read all fields from the phot_arch_spbu_data table.
+  $select = db_select('phot_arch_spbu_polar', 'c');
+  $select->fields('c')
+         ->condition('blazar_id', $blazar_id,'=')
+         ->condition('JD', $JDstart,'>=')
+         ->condition('JD', $JDend,'<=');
+
   // Return the result in object format.
   return $select->execute()->fetchAll();
 }
@@ -197,22 +219,45 @@ function phot_arch_spbu_file_download($filename, $mimetype='application/octet-st
  * Get ascii data from the database.
  */
 function phot_arch_spbu_form_get_ASCII_submit($form, &$form_state) {
-  //obtaining response from DB
-  if ($entries = phot_arch_spbu_data_load($form, $form_state)) {
-    $rows = array();
-    foreach ($entries as $entry) {
-      //$variables = get_object_vars($entry);
-      $row_el = $entry->JD." ".$entry->mag." ".$entry->mag_err;
-      $row_el = $row_el." ".$entry->tel."\n";
-      $rows[] = $row_el;
+  if ($form_state['values']['band'] == 8) {
+    //polarimetry
+    //obtaining response from DB
+    if ($entries = phot_arch_spbu_data_load_polar($form, $form_state)) {
+      $rows = array();
+      foreach ($entries as $entry) {
+        $row_el = $entry->JD." ".$entry->P." ".$entry->P_err;
+        $row_el = $row_el." ".$entry->PA." ".$entry->PA_err;
+        $row_el = $row_el." ".$entry->tel."\r\n";
+        $rows[] = $row_el;
+      }
     }
+    else {
+      drupal_set_message(t('No entries in DB available for this query.'));
+    }
+    $output = "";
+    foreach ($rows as $row) {
+      $output = $output.$row;
+    }   
   }
   else {
-    drupal_set_message(t('No entries in DB available for this query.'));
-  }
-  $output = "";
-  foreach ($rows as $row) {
-    $output = $output.$row;
+    //photometry
+    //obtaining response from DB
+    if ($entries = phot_arch_spbu_data_load_phot($form, $form_state)) {
+      $rows = array();
+      foreach ($entries as $entry) {
+        //$variables = get_object_vars($entry);
+        $row_el = $entry->JD." ".$entry->mag." ".$entry->mag_err;
+        $row_el = $row_el." ".$entry->tel."\r\n";
+        $rows[] = $row_el;
+      }
+    }
+    else {
+      drupal_set_message(t('No entries in DB available for this query.'));
+    }
+    $output = "";
+    foreach ($rows as $row) {
+      $output = $output.$row;
+    }
   }
   $filter = $form['band_fieldset']['band']['#options'][$form_state['values']['band']];
   $blazar_name = $form['name_fieldset']['name']['#options'][$form_state['values']['name']];
@@ -316,6 +361,14 @@ function bands_list_load($blazar_id) {
   foreach ($entries as $entry){
     $bands_with_id[$entry->id] = $entry->band;
   }
+  //check for polarimetric data for this blazar
+  $query = "SELECT COUNT(JD) FROM phot_arch_spbu_polar WHERE blazar_id = '";
+  $query = $query.$blazar_id."'";
+  $result = db_query($query);
+  if ($result->fetchField() > 0){
+    //WARNING this value 8 defined in phot_arch_spbu.install, it can be changed
+    $bands_with_id[8] = "Pol";
+  }
   return $bands_with_id;
 }
 
@@ -334,24 +387,18 @@ function bands_list_load_all() {
   return $bands_with_id;
 }
 
-/** Create javascript with data for dygraphs library
+/** Creates javascript with data for dygraphs library
+    in case of photometric data request
 */
-function get_data_for_plot($blazar_id,$band,$polar) {
+function get_data_for_plot_phot($blazar_id,$band) {
   $query = "SELECT JD, mag FROM phot_arch_spbu_data WHERE blazar_id = '";
   $query = $query.$blazar_id."' AND band_id = '".$band."'";
   $entries = db_query($query)->fetchAll();
   $js_data = '<script type="text/javascript">';
   $js_data = $js_data.'function data_nolabel(){';
   $js_data = $js_data.'return "" +';
-  if ($polar){
-    foreach ($entries as $entry){
-      $js_data = $js_data.'"'.$entry->JD.','.$entry->mag.'\n" + ';
-    }
-  }
-  else{
-    foreach ($entries as $entry){
-      $js_data = $js_data.'"'.$entry->JD.',-'.$entry->mag.'\n" + ';
-    }
+  foreach ($entries as $entry){
+    $js_data = $js_data.'"'.$entry->JD.',-'.$entry->mag.'\n" + ';
   }
   $js_data = rtrim($js_data,' + ');
   $js_data = $js_data.';}function data() {';
@@ -361,22 +408,80 @@ function get_data_for_plot($blazar_id,$band,$polar) {
   return $js_data;
 }
 
-/** */
+/** Creates javascript with data for dygraphs library
+    in case of polarimetric data request
+*/
+function get_data_for_plot_polar($blazar_id,$band) {
+  $js_data = '';
+  $js_data = $js_data.get_data_for_plot_polar_P($blazar_id,$band);
+  $js_data = $js_data.get_data_for_plot_polar_PA($blazar_id,$band);
+  $f = fopen("/tmp/file.txt", "w"); 
+fwrite($f, $js_data); 
+fclose($f); 
+  return $js_data;
+}
+
+/** Creates javascript with data for dygraphs library
+    gets Polarization degree
+*/
+function get_data_for_plot_polar_P($blazar_id,$band) {
+  $query = "SELECT JD, P FROM phot_arch_spbu_polar WHERE blazar_id = '";
+  $query = $query.$blazar_id."'";
+  $entries = db_query($query)->fetchAll();
+  $js_data = '<script type="text/javascript">';
+  $js_data = $js_data.'function data_nolabelp(){';
+  $js_data = $js_data.'return "" +';
+  foreach ($entries as $entry){
+    $js_data = $js_data.'"'.$entry->JD.','.$entry->P.'\n" + ';
+  }
+  $js_data = rtrim($js_data,' + ');
+  $js_data = $js_data.';}function datap() {';
+  $js_data = $js_data.'return "Date,PD\n" + data_nolabelp();';
+  $js_data = $js_data.'}</script>';
+  return $js_data;
+}
+
+/** Creates javascript with data for dygraphs library
+    gets Polarization position angle
+*/
+function get_data_for_plot_polar_PA($blazar_id,$band) {
+  $query = "SELECT JD, PA FROM phot_arch_spbu_polar WHERE blazar_id = '";
+  $query = $query.$blazar_id."'";
+  $entries = db_query($query)->fetchAll();
+  $js_data = '<script type="text/javascript">';
+  $js_data = $js_data.'function data_nolabelpa(){';
+  $js_data = $js_data.'return "" +';
+  foreach ($entries as $entry){
+    $js_data = $js_data.'"'.$entry->JD.','.$entry->PA.'\n" + ';
+  }
+  $js_data = rtrim($js_data,' + ');
+  $js_data = $js_data.';}function datapa() {';
+  $js_data = $js_data.'return "Date,PA\n" + data_nolabelpa();';
+  $js_data = $js_data.'}</script>';
+  return $js_data;
+}
+
+
+/** Decide which plot code we want
+*/
 function get_plot_code($form, $form_state) {
-  $blazar_id = $form_state['values']['name'];
-  $band      = $form_state['values']['band'];
-  //drupal_set_message($band, 'error');
+  //FIXME change next 2 lines for using id of band
   $filter = $form['band_fieldset']['band']['#options'][$form_state['values']['band']];
-  if (($filter == "P") || ($filter == "PA") ){
-    $code = file_get_contents('./sites/all/modules/phot_arch_spbu/plot_js_pol');
-    $txt = get_data_for_plot($blazar_id,$band,True);
+  if (($filter == "Pol") ){
+    $code = get_plot_code_polar($form, $form_state);
   }
   else{
-    $code = file_get_contents('./sites/all/modules/phot_arch_spbu/plot_js');
-    $txt = get_data_for_plot($blazar_id,$band,False);
+    $code = get_plot_code_phot($form, $form_state);
   }
- //$code = file_get_contents('./sites/default/modules/phot_arch_spbu/javascript_plot');
-  
+  return $code;
+}
+
+/** */
+function get_plot_code_phot($form, $form_state) {
+  $blazar_id = $form_state['values']['name'];
+  $band      = $form_state['values']['band'];
+  $code = file_get_contents('./sites/all/modules/phot_arch_spbu/plot_js');
+  $txt = get_data_for_plot_phot($blazar_id,$band);
   $code = $code.$txt;
   $code = $code.'<div style="float: right; display: none">';
   $code = $code.'<p>Zoomed: <span id="zoomed">False</span><p/>';
@@ -384,7 +489,23 @@ function get_plot_code($form, $form_state) {
   $code = $code.'<p>Zoomed Y: <span id="zoomedY">False</span><p/></div>';
   //$code = $code.'<div id="div_g" style="width:600px; height:300px;"></div>';
   $code = $code.'<div id="div_g" style="margin-top:20px; margin-bottom:20px; margin-left:20px; width:600px; height:300px;"></div>';
-  //drupal_set_message(t($code), 'error');
+  return $code;
+}
+
+/** */
+function get_plot_code_polar($form, $form_state) {
+  $blazar_id = $form_state['values']['name'];
+  $band      = $form_state['values']['band'];
+  $code = file_get_contents('./sites/all/modules/phot_arch_spbu/plot_js_pol');
+  $txt = get_data_for_plot_polar($blazar_id,$band);
+  $code = $code.$txt;
+  $code = $code.'<div style="float: right; display: none">';
+  $code = $code.'<p>Zoomed: <span id="zoomed">False</span><p/>';
+  $code = $code.'<p>Zoomed X: <span id="zoomedX">False</span><p/>';
+  $code = $code.'<p>Zoomed Y: <span id="zoomedY">False</span><p/></div>';
+  //$code = $code.'<div id="div_g" style="width:600px; height:300px;"></div>';
+  $code = $code.'<div id="div_gp" style="margin-top:20px; margin-bottom:20px; margin-left:20px; width:600px; height:300px;"></div>';
+  $code = $code.'<div id="div_gpa" style="margin-top:20px; margin-bottom:20px; margin-left:20px; width:600px; height:300px;"></div>';
   return $code;
 }
 
@@ -459,7 +580,7 @@ function phot_arch_spbu_form_add($form, &$form_state) {
 /**
 * Check if the JD is already in the photometry table
 */
-function id_in_table($JD,$band_id,$blazar_id) {
+function id_in_table_phot($JD,$band_id,$blazar_id) {
   $query = "SELECT id FROM phot_arch_spbu_data WHERE JD = '".$JD."'";
   $query = $query."AND band_id = '".$band_id."' AND blazar_id = '".$blazar_id."'";
   $result = db_query($query)->fetchCol();
@@ -470,16 +591,19 @@ function id_in_table($JD,$band_id,$blazar_id) {
 /**
 * Check if the JD is already in the polarization table
 */
-function id_in_table_pol($JD,$blazar_id) {//FIXME
-
-  return False;
+function id_in_table_pol($JD,$blazar_id) {
+  $query = "SELECT id FROM phot_arch_spbu_polar WHERE JD = '".$JD."'";
+  $query = $query." AND blazar_id = '".$blazar_id."'";
+  $result = db_query($query)->fetchCol();
+  if ($result == NULL) return NULL;
+  return $result[0];
 }
 
 /**
 * Rewrite entry in photometric table for given JD 
 */
 function rewrite_entry($old_entry_id, $one_line, $user_id) {
-  $mag     = floatval($one_line[1]); //FIXME who understands comma as delimeter
+  $mag     = floatval($one_line[1]);
   $mag_err = floatval($one_line[2]);
   $tel     = $one_line[3];
   $query = "UPDATE phot_arch_spbu_data SET mag = '".$mag;
@@ -499,7 +623,20 @@ function rewrite_entry($old_entry_id, $one_line, $user_id) {
 /**
 * Rewrite entry in polarimetric table for given JD 
 */
-function rewrite_entry_pol($old_entry_id,$cur_P,$cur_P_err,$cur_PA,$cur_PA_err,$cur_tel) {//FIXME
+function rewrite_entry_pol($old_entry_id,$new_P,$new_P_err,$new_PA,$new_PA_err,$new_tel) {
+  global $user;
+  $query = "UPDATE phot_arch_spbu_polar SET P = '".$new_P;
+  $query = $query."', P_err = '".$new_P_err."', PA = '".$new_PA;
+  $query = $query."', PA_err = '".$new_PA_err."', tel = '".$new_tel;
+  $query = $query."', creator_id = '".$user->uid."' WHERE id = '".$old_entry_id."'";
+  try {
+    db_query($query)->execute();
+  }
+  catch (Exception $e) {
+    $trans_value->rollback();
+    drupal_set_message(t('db_insert failed. Message = %message, query= %query',
+      array('%message' => $e->getMessage(), '%query' => $e->query_string)), 'error');
+  }
   return 0;
 }
 
@@ -571,7 +708,7 @@ function phot_arch_spbu_entry_insert_phot($entry) {
       drupal_set_message(t('It seems that you give not numeric data.'), 'error');
       return NULL;
     }
-    $old_entry_id = id_in_table($one_line[0],$band_id,$blazar_id);
+    $old_entry_id = id_in_table_phot($one_line[0],$band_id,$blazar_id);
     if($old_entry_id != NULL){
       rewrite_entry($old_entry_id, $one_line, $user->uid);
       continue;
@@ -680,7 +817,7 @@ function phot_arch_spbu_entry_insert_polar($entry) {
         $PA[]       = floatval($one_line[2]);
         $P_err[]    = 999;
         $PA_err[]   = 999;
-        $tel[]      = floatval($one_line[3]);
+        $tel[]      = $one_line[3];
       }
       else {
         $JD[]       = floatval($one_line[0]);
@@ -717,7 +854,7 @@ function phot_arch_spbu_entry_insert_polar($entry) {
         $P_err[]    = floatval($one_line[3]);
         $PA[]       = floatval($one_line[4]);
         $PA_err[]   = floatval($one_line[5]);
-        $tel[]      = floatval($one_line[6]);
+        $tel[]      = $one_line[6];
       }
       else {
         $JD[]       = floatval($one_line[0]);
