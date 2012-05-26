@@ -152,7 +152,7 @@ function phot_arch_spbu_form_get($form, &$form_state) {
   // Disable band if a selection has not been made on dropdown_first.
   if (empty($form_state['values']['name'])) {
     $form['band_fieldset']['band']['#disabled'] = TRUE;
-    $form['band_fieldset']['band']['#description'] = t('You must make your choice on the first dropdown before changing this second one.');
+    $form['band_fieldset']['band']['#description'] = t('Сначала выберите объект.');
     $form['JD_fieldset']['JDstart']['#disabled'] = TRUE;
     $form['JD_fieldset']['JDend']['#disabled'] = TRUE;
     $form['JD_fieldset']['ASCII']['#disabled'] = TRUE;
