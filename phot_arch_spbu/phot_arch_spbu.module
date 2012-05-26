@@ -202,7 +202,7 @@ function phot_arch_spbu_form_get_ASCII_submit($form, &$form_state) {
     $rows = array();
     foreach ($entries as $entry) {
       //$variables = get_object_vars($entry);
-      $row_el = $entry->jd." ".$entry->mag." ".$entry->mag_err;
+      $row_el = $entry->JD." ".$entry->mag." ".$entry->mag_err;
       $row_el = $row_el." ".$entry->tel."\n";
       $rows[] = $row_el;
     }
@@ -457,7 +457,7 @@ function phot_arch_spbu_form_add($form, &$form_state) {
 // }
 
 /**
-* Check if the JD is already in the table
+* Check if the JD is already in the photometry table
 */
 function id_in_table($JD,$band_id,$blazar_id) {
   $query = "SELECT id FROM phot_arch_spbu_data WHERE JD = '".$JD."'";
@@ -468,7 +468,15 @@ function id_in_table($JD,$band_id,$blazar_id) {
 }
 
 /**
-* Rewrite entry for given JD 
+* Check if the JD is already in the polarization table
+*/
+function id_in_table_pol($JD,$blazar_id) {//FIXME
+
+  return False;
+}
+
+/**
+* Rewrite entry in photometric table for given JD 
 */
 function rewrite_entry($old_entry_id, $one_line, $user_id) {
   $mag     = floatval($one_line[1]); //FIXME who understands comma as delimeter
@@ -485,6 +493,13 @@ function rewrite_entry($old_entry_id, $one_line, $user_id) {
     drupal_set_message(t('db_insert failed. Message = %message, query= %query',
       array('%message' => $e->getMessage(), '%query' => $e->query_string)), 'error');
   }
+  return 0;
+}
+
+/**
+* Rewrite entry in polarimetric table for given JD 
+*/
+function rewrite_entry_pol($old_entry_id,$cur_P,$cur_P_err,$cur_PA,$cur_PA_err,$cur_tel) {//FIXME
   return 0;
 }
 
@@ -516,31 +531,46 @@ function rewrite_entry($old_entry_id, $one_line, $user_id) {
  */
 function phot_arch_spbu_entry_insert($entry) {
   global $user;
-  $n_new_rows = 0;
   //check if user allowed to add the database
   if (! in_array("phot_db_maintainer", $user->roles)) {
     drupal_set_message(t('ask Admin to be added to phot_db_maintainer role'), 'error');
     return NULL;
   }
+  $band_id = $entry['band'];
+  if ($band_id == 8){//FIXME dangerous written in phot_arch_spbu.install
+    $query = phot_arch_spbu_entry_insert_polar($entry);
+  }
+  else{
+    $query = phot_arch_spbu_entry_insert_phot($entry);
+  }
+  return $query;
+}
 
+/**
+ * Save photometry entry in the database.
+ *
+ */
+function phot_arch_spbu_entry_insert_phot($entry) {
+  global $user;
+  $n_new_rows = 0;
+  $blazar_id = $entry['blazar_name'];
+  $band_id = $entry['band'];
   //parsing data
   $data_arr = preg_split("/((?<!\\\|\r)\n)|((?<!\\\)\r\n)/", $entry['data']);
   foreach ($data_arr as $value) {
     $value = trim ($value);
     if ($value == "") continue;
     $one_line  = preg_split("/[\s,]+/", $value);
-    if (count($one_line) != 4) {
-      drupal_set_message(t('Data string length must be = 4'), 'error');
+    if ( (count($one_line) < 3)||(count($one_line) > 22) ) {
+      drupal_set_message(t('Data string length must be >= 3 and <= 22'), 'error');
       return NULL;
     }
     if (!(is_numeric($one_line[0]) &&
-          is_numeric($one_line[0]) &&
-          is_numeric($one_line[0]))) {
-      drupal_set_message(t('It seems that you give not numeric data or commas.'), 'error');
+          is_numeric($one_line[1]) &&
+          is_numeric($one_line[2]))) {
+      drupal_set_message(t('It seems that you give not numeric data.'), 'error');
       return NULL;
     }
-    $blazar_id = $entry['blazar_name'];
-    $band_id = $entry['band'];
     $old_entry_id = id_in_table($one_line[0],$band_id,$blazar_id);
     if($old_entry_id != NULL){
       rewrite_entry($old_entry_id, $one_line, $user->uid);
@@ -550,12 +580,16 @@ function phot_arch_spbu_entry_insert($entry) {
       $JD[]       = floatval($one_line[0]); //FIXME change it with smart function
       $mag[]      = floatval($one_line[1]); //FIXME who understands comma as delimeter
       $mag_err[]  = floatval($one_line[2]);
-      $tel[]      = $one_line[3];
+      if(count($one_line) == 4) {
+        //only in case of 4 rows tel is the last one
+        $tel[]      = $one_line[3];
+      }
+      else{
+        $tel[]      = "Unknown";
+      }
       $n_new_rows = $n_new_rows + 1;
     }
   }
-  
-  
 
   if($n_new_rows < 1) return NULL;
   $trans_value = db_transaction();
@@ -579,6 +613,161 @@ function phot_arch_spbu_entry_insert($entry) {
                                           'band_id',
                                           'mag',
                                           'mag_err',
+                                          'tel'
+                                          ));
+    foreach ($data_entries as $data_entry) {
+      $query->values($data_entry);
+    }
+    $query->execute();
+  }
+  catch (Exception $e) {
+    $trans_value->rollback();
+    drupal_set_message(t('db_insert failed. Message = %message, query= %query',
+      array('%message' => $e->getMessage(), '%query' => $e->query_string)), 'error');
+  }
+  return $query;
+}
+
+/**
+ * Save polarimetry entry in the database.
+ *
+ */
+function phot_arch_spbu_entry_insert_polar($entry) {
+  global $user;
+  $n_new_rows = 0;
+  $blazar_id = $entry['blazar_name'];
+  $band_id = $entry['band'];
+  //parsing data
+  $data_arr = preg_split("/((?<!\\\|\r)\n)|((?<!\\\)\r\n)/", $entry['data']);
+  foreach ($data_arr as $value) {
+    $value = trim ($value);
+    if ($value == "") continue;
+    $one_line  = preg_split("/[\s,]+/", $value);
+    if ( (count($one_line) < 3)||(count($one_line) > 7) ) {
+      drupal_set_message(t('Data string length must be >= 3 and <= 7'), 'error');
+      return NULL;
+    }
+    if (count($one_line) > 3){
+      //if not "JD P PA" all but one must be numeric
+      for ($i = 0; $i < count($one_line)-1; $i += 1) {
+        if (!(is_numeric($one_line[$i]))) {
+          drupal_set_message(t('Only last data row can be literal.'), 'error');
+          return NULL;
+        }
+      }
+    }
+
+    // "JD P PA"
+    if (count($one_line) == 3){
+      if (!(is_numeric($one_line[0]) &&
+            is_numeric($one_line[1]) &&
+            is_numeric($one_line[2]))) {
+        drupal_set_message(t('It seems that you give not numeric data.'), 'error');
+        return NULL;
+      }
+      $JD[]       = floatval($one_line[0]); //FIXME change it with smart function
+      $P[]        = floatval($one_line[1]); //FIXME who understands comma as delimeter
+      $PA[]       = floatval($one_line[2]);
+      $P_err[]    = 999;
+      $PA_err[]   = 999;
+      $tel[]      = "Unknown";
+    }
+    // "JD P PA tel" or "JD m P PA"
+    if (count($one_line) == 4){
+      if (!(is_numeric($one_line[3]))) {
+        $JD[]       = floatval($one_line[0]);
+        $P[]        = floatval($one_line[1]);
+        $PA[]       = floatval($one_line[2]);
+        $P_err[]    = 999;
+        $PA_err[]   = 999;
+        $tel[]      = floatval($one_line[3]);
+      }
+      else {
+        $JD[]       = floatval($one_line[0]);
+        $P[]        = floatval($one_line[2]);
+        $PA[]       = floatval($one_line[3]);
+        $P_err[]    = 999;
+        $PA_err[]   = 999;
+        $tel[]      = "Unknown";
+      }
+    }
+    // "JD P P_err PA PA_err"
+    if (count($one_line) == 5){
+      $JD[]       = floatval($one_line[0]);
+      $P[]        = floatval($one_line[1]);
+      $P_err[]    = floatval($one_line[2]);
+      $PA[]       = floatval($one_line[3]);
+      $PA_err[]   = floatval($one_line[4]);
+      $tel[]      = "Unknown";
+    }
+    // "JD m P P_err PA PA_err"
+    if (count($one_line) == 6){
+      $JD[]       = floatval($one_line[0]);
+      $P[]        = floatval($one_line[2]);
+      $P_err[]    = floatval($one_line[3]);
+      $PA[]       = floatval($one_line[4]);
+      $PA_err[]   = floatval($one_line[5]);
+      $tel[]      = "Unknown";
+    }
+    // "JD m P P_err PA PA_err tel" or "JD m P P_err PA PA_err FWHM"
+    if (count($one_line) == 7){
+      if (!(is_numeric($one_line[6]))) {
+        $JD[]       = floatval($one_line[0]);
+        $P[]        = floatval($one_line[2]);
+        $P_err[]    = floatval($one_line[3]);
+        $PA[]       = floatval($one_line[4]);
+        $PA_err[]   = floatval($one_line[5]);
+        $tel[]      = floatval($one_line[6]);
+      }
+      else {
+        $JD[]       = floatval($one_line[0]);
+        $P[]        = floatval($one_line[2]);
+        $P_err[]    = floatval($one_line[3]);
+        $PA[]       = floatval($one_line[4]);
+        $PA_err[]   = floatval($one_line[5]);
+        $tel[]      = "Unknown";
+      }
+    }
+    //ready to write or rewrite
+    $JDates  = array_values($JD);//just to prevent warnings
+    $old_entry_id  = id_in_table_pol(end($JDates),$blazar_id);
+    if($old_entry_id != NULL){
+      $cur_JD      = array_pop($JD);
+      $cur_P       = array_pop($P);
+      $cur_P_err   = array_pop($P_err);
+      $cur_PA      = array_pop($PA);
+      $cur_PA_err  = array_pop($PA_err);
+      $cur_tel     = array_pop($tel);
+      rewrite_entry_pol($old_entry_id,$cur_P,$cur_P_err,$cur_PA,$cur_PA_err,$cur_tel);
+      continue;
+    }
+    $n_new_rows = $n_new_rows + 1;//WARNING do i really need it
+  }
+
+  if($n_new_rows < 1) return NULL;
+  $trans_value = db_transaction();
+  try {
+    //fill data table
+    for ( $i = 0; $i < count($JD); $i += 1) {
+        $data_entries[] = array(
+          'creator_id'  => $user->uid,
+          'blazar_id'   => $blazar_id,
+          'JD'          => $JD[$i],
+          'P'           => $P[$i],
+          'P_err'       => $P_err[$i],
+          'PA'          => $PA[$i],
+          'PA_err'      => $PA_err[$i],
+          'tel'         => $tel[$i],
+        );
+    }
+    $query = db_insert('phot_arch_spbu_polar')->fields(array(
+                                          'creator_id',
+                                          'blazar_id',
+                                          'JD',
+                                          'P',
+                                          'P_err',
+                                          'PA',
+                                          'PA_err',
                                           'tel'
                                           ));
     foreach ($data_entries as $data_entry) {

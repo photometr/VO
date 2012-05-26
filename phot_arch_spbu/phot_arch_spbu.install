@@ -105,15 +105,9 @@ function phot_arch_spbu_install() {
     ->fields($fields)
     ->execute();
   $fields = array(
-    'id'    => '8',
-    'band' => 'P',
-  );
-  db_insert('phot_arch_spbu_bands')
-    ->fields($fields)
-    ->execute();
-  $fields = array(
-    'id'    => '9',
-    'band' => 'PA',
+    'id'    => '8',//FIXME change if statement in phot_arch_spbu_entry_insert(..)
+//of phot_arch_spbu.module if you change this value
+    'band' => 'Pol',
   );
   db_insert('phot_arch_spbu_bands')
     ->fields($fields)
@@ -257,5 +251,78 @@ function phot_arch_spbu_schema() {
     ),
   );
 
+  $schema['phot_arch_spbu_polar'] = array(
+    'description' => 'Stores polarimetry data.',
+    'fields' => array(
+      'id'  => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique data point ID.',
+      ),
+      'creator_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "Creator user's {users}.uid",
+      ),
+      'blazar_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => "Blazar ID from {phot_arch_spbu_objects}.id",
+      ),
+      'JD' => array(
+        'type' => 'float',
+        'size' => 'big',
+        'not null' => TRUE,
+        'description' => 'Julian date of the observation.',
+      ),
+      'P' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Stellar magnitude.',
+      ),
+      'P_err' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Stellar magnitude error.',
+      ),
+      'PA' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Stellar magnitude.',
+      ),
+      'PA_err' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Stellar magnitude error.',
+      ),
+      'tel' => array(
+        'type' => 'varchar',
+        'length' => 2048,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Telescope name.',
+      ),
+    ),
+    'primary key' => array('id'),
+    'indexes' => array(
+      'JD'         => array('JD'),
+      'P'        => array('P'),
+      'P_err'    => array('P_err'),
+      'PA'        => array('PA'),
+      'PA_err'    => array('PA_err'),
+      'tel'        => array('tel'),
+    ),
+    'foreign keys' => array(
+      'blazar_id' => array(
+        'table'   => 'phot_arch_spbu_objects',
+        'columns' => array('blazar_id' => 'id'),
+      ),
+      'creator_id' => array(
+        'table'   => 'users',
+        'columns' => array('creator_id' => 'uid'),
+      ),
+    ),
+  );
   return $schema;
 }
