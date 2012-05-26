@@ -85,6 +85,15 @@ function phot_arch_spbu_menu() {
     'file' => 'add_obj.inc',
     'weight' => -8,
   );
+  $items['VO/phot_arch_spbu/delete'] = array(
+    'title' => 'Удалить данные',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('phot_arch_spbu_form_delete'),
+    'access callback' => TRUE,
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'delete_data.inc',
+    'weight' => -7,
+  );
   //$items['VO/phot_arch_spbu/list'] = array(
   //  'title' => 'Other archives',
   //  'page callback' => 'drupal_get_form',
@@ -513,7 +522,7 @@ function get_plot_code_polar($form, $form_state) {
  * Prepare a simple form to add data, with all the interesting fields.
  */
 function phot_arch_spbu_form_add($form, &$form_state) {
-  //check if user allowed to add the database
+  //check if user allowed to add to the database
   global $user;
   if (! in_array("phot_db_maintainer", $user->roles)) {
     $error_text = '<font size="3" color="red">Только зарегистрированные пользователи имеют доступ к данным!</font>';
