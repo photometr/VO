@@ -126,6 +126,7 @@ function phot_arch_spbu_form_get($form, &$form_state) {
     '#type'  => 'textfield',
     '#title' => t('До JD:'),
     '#size'  => 10,
+    '#description' => t('оставьте поля пустыми, если хотите получить все данные'),
   );
   $form['JD_fieldset']['plot'] = array(
     '#prefix' => '<div id="plot_div">',
