@@ -94,6 +94,14 @@ function phot_arch_spbu_menu() {
     'file' => 'delete_data.inc',
     'weight' => -7,
   );
+  // A menu callback is required when using ajax outside of the Form API.
+  $items['pa_ajax_link_callback'] = array(
+    'page callback' => 'pa_ajax_link_response',
+    'access callback' => 'user_access',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+    //'file' => 'ajax_example_misc.inc',
+  );
   //$items['VO/phot_arch_spbu/list'] = array(
   //  'title' => 'Other archives',
   //  'page callback' => 'drupal_get_form',
@@ -536,6 +544,8 @@ function phot_arch_spbu_form_add($form, &$form_state) {
     );
     return $form;
   }
+
+  $explanation = "Данные:";
   $form = array();
 
   $form = array(
@@ -552,9 +562,24 @@ function phot_arch_spbu_form_add($form, &$form_state) {
     '#options' => bands_list_load_all(),
     '#title' => t('Фотометрическая полоса:'),
   );
+  $form['my_div'] = array(
+    '#markup' => $explanation . '<div id="explanationDiv"></div>',
+  );
+  $form['ajax_link'] = array(
+    '#type' => 'link',
+    '#title' => t('Возможные форматы'),
+    // Note the /nojs portion of the href - if javascript is enabled,
+    // this part will be stripped from the path before it is called.
+    '#href' => 'pa_ajax_link_callback/nojs/',
+    '#id' => 'ajax_link',
+    '#ajax' => array(
+      'wrapper' => 'explanationDiv',
+      'method' => 'html',
+    ),
+  );
   $form['data'] = array(
     '#type'  => 'textarea',
-    '#title' => 'Данные:<br>в следующем формате "JD зв.величина ошибка_зв.величины телескоп"',
+    '#title' => '',
     '#size'  => 15,
     '#description' => t('используйте 999, если ошибка наблюдений неизвестна'),
   );
@@ -564,6 +589,46 @@ function phot_arch_spbu_form_add($form, &$form_state) {
   );
 
   return $form;
+}
+
+/**
+ * Callback for link example. FIXME move to add data file
+ *
+ * Takes different logic paths based on whether Javascript was enabled.
+ * If $type == 'ajax', it tells this function that ajax.js has rewritten
+ * the URL and thus we are doing an AJAX and can return an array of commands.
+ *
+ * @param $type
+ *   Either 'ajax' or 'nojs. Type is simply the normal URL argument to this URL.
+ *
+ * @return
+ *   If $type == 'ajax', returns an array of AJAX Commands.
+ *   Otherwise, just returns the content, which will end up being a page.
+ *
+ * @ingroup ajax_example
+ */
+function pa_ajax_link_response($type = 'ajax') {
+  $output = t("1. JD Magnitude Magnutude_error<br>");
+  $output = $output.t("2. JD Magnitude Magnutude_error Telescope<br>");
+  $output = $output.t("3. JD Magnitude Magnutude_error ... (22 rows)<br>");
+  $output = $output.t("4. JD P PA<br>");
+  $output = $output.t("5. JD P PA Telescope<br>");
+  $output = $output.t("6. JD Magnitude P PA<br>");
+  $output = $output.t("7. JD P P_error PA PA_error<br>");
+  $output = $output.t("8. JD Magnitude P P_error PA PA_error<br>");
+  $output = $output.t("9. JD Magnitude P P_error PA PA_error Telescope<br>");
+  $output = $output.t("10. JD Magnitude P P_error PA PA_error FWHM<br>");
+  if ($type == 'ajax') {
+    $commands = array();
+    // See ajax_example_advanced.inc for more details on the available commands
+    // and how to use them.
+    $commands[] = ajax_command_append('#explanationDiv', $output);
+    $page = array('#type' => 'ajax', '#commands' => $commands);
+    ajax_deliver($page);
+  }
+  else {
+    return $output;
+  }
 }
 
 /**
