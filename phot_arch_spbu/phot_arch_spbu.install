@@ -276,22 +276,22 @@ function phot_arch_spbu_schema() {
         'not null' => TRUE,
         'description' => 'Julian date of the observation.',
       ),
-      'P' => array(
+      'p' => array(
         'type' => 'float',
         'not null' => TRUE,
         'description' => 'Stellar magnitude.',
       ),
-      'P_err' => array(
+      'p_err' => array(
         'type' => 'float',
         'not null' => TRUE,
         'description' => 'Stellar magnitude error.',
       ),
-      'PA' => array(
+      'pa' => array(
         'type' => 'float',
         'not null' => TRUE,
         'description' => 'Stellar magnitude.',
       ),
-      'PA_err' => array(
+      'pa_err' => array(
         'type' => 'float',
         'not null' => TRUE,
         'description' => 'Stellar magnitude error.',
@@ -307,10 +307,10 @@ function phot_arch_spbu_schema() {
     'primary key' => array('id'),
     'indexes' => array(
       'jd'         => array('jd'),
-      'P'        => array('P'),
-      'P_err'    => array('P_err'),
-      'PA'        => array('PA'),
-      'PA_err'    => array('PA_err'),
+      'p'        => array('p'),
+      'p_err'    => array('p_err'),
+      'pa'        => array('pa'),
+      'pa_err'    => array('pa_err'),
       'tel'        => array('tel'),
     ),
     'foreign keys' => array(

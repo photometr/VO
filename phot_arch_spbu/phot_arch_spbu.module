@@ -243,10 +243,10 @@ function phot_arch_spbu_form_get_ASCII_submit($form, &$form_state) {
       $rows = array();
       foreach ($entries as $entry) {
         $row_el = sprintf("%5.5f ", $entry->jd);
-        $row_el = $row_el.sprintf("%9s ",sprintf("%3.4f ", $entry->P));
-        $row_el = $row_el.sprintf("%8s ",sprintf("%3.4f ", $entry->P_err));
-        $row_el = $row_el.sprintf("%10s ",sprintf("%5.4f ", $entry->PA));
-        $row_el = $row_el.sprintf("%8s ",sprintf("%3.4f ", $entry->PA_err));
+        $row_el = $row_el.sprintf("%9s ",sprintf("%3.4f ", $entry->p));
+        $row_el = $row_el.sprintf("%8s ",sprintf("%3.4f ", $entry->p_err));
+        $row_el = $row_el.sprintf("%10s ",sprintf("%5.4f ", $entry->pa));
+        $row_el = $row_el.sprintf("%8s ",sprintf("%3.4f ", $entry->pa_err));
         $row_el = $row_el.sprintf("%10s\r\n", $entry->tel);
         $rows[] = $row_el;
       }
@@ -444,14 +444,14 @@ function get_data_for_plot_polar($blazar_id,$band) {
     gets Polarization degree
 */
 function get_data_for_plot_polar_P($blazar_id,$band) {
-  $query = "SELECT jd, P FROM phot_arch_spbu_polar WHERE blazar_id = '";
+  $query = "SELECT jd, p FROM phot_arch_spbu_polar WHERE blazar_id = '";
   $query = $query.$blazar_id."'";
   $entries = db_query($query)->fetchAll();
   $js_data = '<script type="text/javascript">';
   $js_data = $js_data.'function data_nolabelp(){';
   $js_data = $js_data.'return "" +';
   foreach ($entries as $entry){
-    $js_data = $js_data.'"'.$entry->jd.','.$entry->P.'\n" + ';
+    $js_data = $js_data.'"'.$entry->jd.','.$entry->p.'\n" + ';
   }
   $js_data = rtrim($js_data,' + ');
   $js_data = $js_data.';}function datap() {';
@@ -464,14 +464,14 @@ function get_data_for_plot_polar_P($blazar_id,$band) {
     gets Polarization position angle
 */
 function get_data_for_plot_polar_PA($blazar_id,$band) {
-  $query = "SELECT jd, PA FROM phot_arch_spbu_polar WHERE blazar_id = '";
+  $query = "SELECT jd, pa FROM phot_arch_spbu_polar WHERE blazar_id = '";
   $query = $query.$blazar_id."'";
   $entries = db_query($query)->fetchAll();
   $js_data = '<script type="text/javascript">';
   $js_data = $js_data.'function data_nolabelpa(){';
   $js_data = $js_data.'return "" +';
   foreach ($entries as $entry){
-    $js_data = $js_data.'"'.$entry->jd.','.$entry->PA.'\n" + ';
+    $js_data = $js_data.'"'.$entry->jd.','.$entry->pa.'\n" + ';
   }
   $js_data = rtrim($js_data,' + ');
   $js_data = $js_data.';}function datapa() {';
@@ -701,9 +701,9 @@ function rewrite_entry($old_entry_id, $one_line, $user_id) {
 */
 function rewrite_entry_pol($old_entry_id,$new_P,$new_P_err,$new_PA,$new_PA_err,$new_tel) {
   global $user;
-  $query = "UPDATE phot_arch_spbu_polar SET P = '".$new_P;
-  $query = $query."', P_err = '".$new_P_err."', PA = '".$new_PA;
-  $query = $query."', PA_err = '".$new_PA_err."', tel = '".$new_tel;
+  $query = "UPDATE phot_arch_spbu_polar SET p = '".$new_P;
+  $query = $query."', p_err = '".$new_P_err."', pa = '".$new_PA;
+  $query = $query."', pa_err = '".$new_PA_err."', tel = '".$new_tel;
   $query = $query."', creator_id = '".$user->uid."' WHERE id = '".$old_entry_id."'";
   try {
     db_query($query)->execute();
@@ -966,10 +966,10 @@ function phot_arch_spbu_entry_insert_polar($entry) {
           'creator_id'  => $user->uid,
           'blazar_id'   => $blazar_id,
           'jd'          => $JD[$i],
-          'P'           => $P[$i],
-          'P_err'       => $P_err[$i],
-          'PA'          => $PA[$i],
-          'PA_err'      => $PA_err[$i],
+          'p'           => $P[$i],
+          'p_err'       => $P_err[$i],
+          'pa'          => $PA[$i],
+          'pa_err'      => $PA_err[$i],
           'tel'         => $tel[$i],
         );
     }
@@ -977,10 +977,10 @@ function phot_arch_spbu_entry_insert_polar($entry) {
                                           'creator_id',
                                           'blazar_id',
                                           'jd',
-                                          'P',
-                                          'P_err',
-                                          'PA',
-                                          'PA_err',
+                                          'p',
+                                          'p_err',
+                                          'pa',
+                                          'pa_err',
                                           'tel'
                                           ));
     foreach ($data_entries as $data_entry) {
