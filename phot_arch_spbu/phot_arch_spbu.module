@@ -149,7 +149,7 @@ function phot_arch_spbu_get_data() {
       $rows[] = array_map('check_plain', (array) $entry);
     }
     // Make a table for them.
-    $header = array(t('id'),t('creator_id'),t('blazar_id'),t('JD'), t('band'), t('mag'), t('mag_err'));
+    $header = array(t('id'),t('creator_id'),t('blazar_id'),t('jd'), t('band'), t('mag'), t('mag_err'));
     $output .= theme('table', array('header' => $header, 'rows' => $rows));
   }
   else {
@@ -174,8 +174,8 @@ function phot_arch_spbu_data_load_phot($form, $form_state) {
   $select = db_select('phot_arch_spbu_data', 'c');
   $select->fields('c')
          ->condition('blazar_id', $blazar_id,'=')
-         ->condition('JD', $JDstart,'>=')
-         ->condition('JD', $JDend,'<=');
+         ->condition('jd', $JDstart,'>=')
+         ->condition('jd', $JDend,'<=');
 
   if (!empty($band)) {
     $select->condition('band_id', $band,'=');
@@ -199,8 +199,8 @@ function phot_arch_spbu_data_load_polar($form, $form_state) {
   $select = db_select('phot_arch_spbu_polar', 'c');
   $select->fields('c')
          ->condition('blazar_id', $blazar_id,'=')
-         ->condition('JD', $JDstart,'>=')
-         ->condition('JD', $JDend,'<=');
+         ->condition('jd', $JDstart,'>=')
+         ->condition('jd', $JDend,'<=');
 
   // Return the result in object format.
   return $select->execute()->fetchAll();
@@ -242,7 +242,7 @@ function phot_arch_spbu_form_get_ASCII_submit($form, &$form_state) {
     if ($entries = phot_arch_spbu_data_load_polar($form, $form_state)) {
       $rows = array();
       foreach ($entries as $entry) {
-        $row_el = sprintf("%5.5f ", $entry->JD);
+        $row_el = sprintf("%5.5f ", $entry->jd);
         $row_el = $row_el.sprintf("%9s ",sprintf("%3.4f ", $entry->P));
         $row_el = $row_el.sprintf("%8s ",sprintf("%3.4f ", $entry->P_err));
         $row_el = $row_el.sprintf("%10s ",sprintf("%5.4f ", $entry->PA));
@@ -266,7 +266,7 @@ function phot_arch_spbu_form_get_ASCII_submit($form, &$form_state) {
       $rows = array();
       foreach ($entries as $entry) {
         //$variables = get_object_vars($entry);
-        $row_el = sprintf("%5.5f ", $entry->JD);
+        $row_el = sprintf("%5.5f ", $entry->jd);
         $row_el = $row_el.sprintf("%9s ",sprintf("%2.4f ", $entry->mag));
         $row_el = $row_el.sprintf("%8s ",sprintf("%2.4f ", $entry->mag_err));
         $row_el = $row_el.sprintf("%10s\r\n", $entry->tel);
@@ -384,7 +384,7 @@ function bands_list_load($blazar_id) {
     $bands_with_id[$entry->id] = $entry->band;
   }
   //check for polarimetric data for this blazar
-  $query = "SELECT COUNT(JD) FROM phot_arch_spbu_polar WHERE blazar_id = '";
+  $query = "SELECT COUNT(jd) FROM phot_arch_spbu_polar WHERE blazar_id = '";
   $query = $query.$blazar_id."'";
   $result = db_query($query);
   if ($result->fetchField() > 0){
@@ -413,14 +413,14 @@ function bands_list_load_all() {
     in case of photometric data request
 */
 function get_data_for_plot_phot($blazar_id,$band) {
-  $query = "SELECT JD, mag FROM phot_arch_spbu_data WHERE blazar_id = '";
+  $query = "SELECT jd, mag FROM phot_arch_spbu_data WHERE blazar_id = '";
   $query = $query.$blazar_id."' AND band_id = '".$band."'";
   $entries = db_query($query)->fetchAll();
   $js_data = '<script type="text/javascript">';
   $js_data = $js_data.'function data_nolabel(){';
   $js_data = $js_data.'return "" +';
   foreach ($entries as $entry){
-    $js_data = $js_data.'"'.$entry->JD.',-'.$entry->mag.'\n" + ';
+    $js_data = $js_data.'"'.$entry->jd.',-'.$entry->mag.'\n" + ';
   }
   $js_data = rtrim($js_data,' + ');
   $js_data = $js_data.';}function data() {';
@@ -444,14 +444,14 @@ function get_data_for_plot_polar($blazar_id,$band) {
     gets Polarization degree
 */
 function get_data_for_plot_polar_P($blazar_id,$band) {
-  $query = "SELECT JD, P FROM phot_arch_spbu_polar WHERE blazar_id = '";
+  $query = "SELECT jd, P FROM phot_arch_spbu_polar WHERE blazar_id = '";
   $query = $query.$blazar_id."'";
   $entries = db_query($query)->fetchAll();
   $js_data = '<script type="text/javascript">';
   $js_data = $js_data.'function data_nolabelp(){';
   $js_data = $js_data.'return "" +';
   foreach ($entries as $entry){
-    $js_data = $js_data.'"'.$entry->JD.','.$entry->P.'\n" + ';
+    $js_data = $js_data.'"'.$entry->jd.','.$entry->P.'\n" + ';
   }
   $js_data = rtrim($js_data,' + ');
   $js_data = $js_data.';}function datap() {';
@@ -464,14 +464,14 @@ function get_data_for_plot_polar_P($blazar_id,$band) {
     gets Polarization position angle
 */
 function get_data_for_plot_polar_PA($blazar_id,$band) {
-  $query = "SELECT JD, PA FROM phot_arch_spbu_polar WHERE blazar_id = '";
+  $query = "SELECT jd, PA FROM phot_arch_spbu_polar WHERE blazar_id = '";
   $query = $query.$blazar_id."'";
   $entries = db_query($query)->fetchAll();
   $js_data = '<script type="text/javascript">';
   $js_data = $js_data.'function data_nolabelpa(){';
   $js_data = $js_data.'return "" +';
   foreach ($entries as $entry){
-    $js_data = $js_data.'"'.$entry->JD.','.$entry->PA.'\n" + ';
+    $js_data = $js_data.'"'.$entry->jd.','.$entry->PA.'\n" + ';
   }
   $js_data = rtrim($js_data,' + ');
   $js_data = $js_data.';}function datapa() {';
@@ -657,7 +657,7 @@ function pa_ajax_link_response($type = 'ajax') {
 * Check if the JD is already in the photometry table
 */
 function id_in_table_phot($JD,$band_id,$blazar_id) {
-  $query = "SELECT id FROM phot_arch_spbu_data WHERE JD = '".$JD."'";
+  $query = "SELECT id FROM phot_arch_spbu_data WHERE jd = '".$JD."'";
   $query = $query."AND band_id = '".$band_id."' AND blazar_id = '".$blazar_id."'";
   $result = db_query($query)->fetchCol();
   if ($result == NULL) return NULL;
@@ -668,7 +668,7 @@ function id_in_table_phot($JD,$band_id,$blazar_id) {
 * Check if the JD is already in the polarization table
 */
 function id_in_table_pol($JD,$blazar_id) {
-  $query = "SELECT id FROM phot_arch_spbu_polar WHERE JD = '".$JD."'";
+  $query = "SELECT id FROM phot_arch_spbu_polar WHERE jd = '".$JD."'";
   $query = $query." AND blazar_id = '".$blazar_id."'";
   $result = db_query($query)->fetchCol();
   if ($result == NULL) return NULL;
@@ -812,7 +812,7 @@ function phot_arch_spbu_entry_insert_phot($entry) {
         $data_entries[] = array(
           'creator_id'  => $user->uid,
           'blazar_id'   => $blazar_id,
-          'JD'          => $JD[$i],
+          'jd'          => $JD[$i],
           'band_id'     => $band_id,
           'mag'         => $mag[$i],
           'mag_err'     => $mag_err[$i],
@@ -822,7 +822,7 @@ function phot_arch_spbu_entry_insert_phot($entry) {
     $query = db_insert('phot_arch_spbu_data')->fields(array(
                                           'creator_id',
                                           'blazar_id',
-                                          'JD',
+                                          'jd',
                                           'band_id',
                                           'mag',
                                           'mag_err',
@@ -965,7 +965,7 @@ function phot_arch_spbu_entry_insert_polar($entry) {
         $data_entries[] = array(
           'creator_id'  => $user->uid,
           'blazar_id'   => $blazar_id,
-          'JD'          => $JD[$i],
+          'jd'          => $JD[$i],
           'P'           => $P[$i],
           'P_err'       => $P_err[$i],
           'PA'          => $PA[$i],
@@ -976,7 +976,7 @@ function phot_arch_spbu_entry_insert_polar($entry) {
     $query = db_insert('phot_arch_spbu_polar')->fields(array(
                                           'creator_id',
                                           'blazar_id',
-                                          'JD',
+                                          'jd',
                                           'P',
                                           'P_err',
                                           'PA',

@@ -199,7 +199,7 @@ function phot_arch_spbu_schema() {
         'not null' => TRUE,
         'description' => "Blazar ID from {phot_arch_spbu_objects}.id",
       ),
-      'JD' => array(
+      'jd' => array(
         'type' => 'float',
         'size' => 'big',
         'not null' => TRUE,
@@ -230,7 +230,7 @@ function phot_arch_spbu_schema() {
     ),
     'primary key' => array('id'),
     'indexes' => array(
-      'JD'         => array('JD'),
+      'jd'         => array('jd'),
       'mag'        => array('mag'),
       'mag_err'    => array('mag_err'),
       'tel'        => array('tel'),
@@ -270,7 +270,7 @@ function phot_arch_spbu_schema() {
         'not null' => TRUE,
         'description' => "Blazar ID from {phot_arch_spbu_objects}.id",
       ),
-      'JD' => array(
+      'jd' => array(
         'type' => 'float',
         'size' => 'big',
         'not null' => TRUE,
@@ -306,7 +306,7 @@ function phot_arch_spbu_schema() {
     ),
     'primary key' => array('id'),
     'indexes' => array(
-      'JD'         => array('JD'),
+      'jd'         => array('jd'),
       'P'        => array('P'),
       'P_err'    => array('P_err'),
       'PA'        => array('PA'),

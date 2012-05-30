@@ -110,7 +110,7 @@ function phot_arch_spbu_entries_delete_polar($entry) {
     foreach ($JD as $date) {
       $result = db_delete('phot_arch_spbu_polar')
                    ->condition('blazar_id', $blazar_id)
-                   ->condition('JD', $date)
+                   ->condition('jd', $date)
                    ->execute();
     }
     $result = True;
@@ -153,7 +153,7 @@ function phot_arch_spbu_entries_delete_phot($entry) {
       $result = db_delete('phot_arch_spbu_data')
                    ->condition('blazar_id', $blazar_id)
                    ->condition('band_id', $band_id)
-                   ->condition('JD', $date)
+                   ->condition('jd', $date)
                    ->execute();
     }
     $result = True;
