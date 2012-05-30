@@ -1826,6 +1826,9 @@ Dygraph.prototype.generateLegendHTML_ = function(x, sel_points, oneEmWidth) {
 
     var cls = (pt.name == this.highlightSet_) ? " class='highlight'" : "";
     // TODO(danvk): use a template string here and make it an attribute.
+    if (pt.name == 'Magnitude') {
+      yval = -yval;
+    }
     html += "<span" + cls + ">" + " <b><span style='color: " + c + ";'>" + pt.name +
         "</span></b>:" + yval + "</span>";
   }
