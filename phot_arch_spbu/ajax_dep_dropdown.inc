@@ -184,11 +184,13 @@ function ajax_name_dropdown_callback($form, $form_state) {
  *   Renderable array (the second dropdown).
  */
 function ajax_band_dropdown_callback($form, $form_state) {
-  $form['JD_fieldset']['plot']['#markup'] = get_plot_code($form, $form_state);
-  return $form['JD_fieldset'];
-//$commands = array();
-//$commands[] = ajax_command_replace('#plot_div', get_plot_code());
-//return array('#type' => 'ajax', '#commands' => $commands);
+  if ($form_state['values']['band']==0) {
+    return NULL;
+  }
+  else {
+    $form['JD_fieldset']['plot']['#markup'] = get_plot_code($form, $form_state);
+    return $form['JD_fieldset'];
+  }
 }
 
 

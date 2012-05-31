@@ -236,6 +236,10 @@ function phot_arch_spbu_file_download($filename, $mimetype='application/octet-st
  * Get ascii data from the database.
  */
 function phot_arch_spbu_form_get_ASCII_submit($form, &$form_state) {
+  if ($form_state['values']['band'] == 0) {
+    drupal_set_message(t('You have to select a band!'),'error');
+    return NULL;
+  }
   if ($form_state['values']['band'] == 8) {
     //polarimetry
     //obtaining response from DB
@@ -390,6 +394,16 @@ function bands_list_load($blazar_id) {
   if ($result->fetchField() > 0){
     //WARNING this value 8 defined in phot_arch_spbu.install, it can be changed
     $bands_with_id[8] = "Pol";
+  }
+  //Add an empty line to the bands list FIXME remake it in a right way
+  //otherwise it's impossible to select single value in the dropdown or the first one
+  if (count($bands_with_id) > 0){
+    //change order to show empty line first
+    $tmp_bands_with_id[0] = " ";
+    foreach (array_keys($bands_with_id) as $key){
+      $tmp_bands_with_id[$key] = $bands_with_id[$key];
+    }
+    $bands_with_id = $tmp_bands_with_id;
   }
   return $bands_with_id;
 }
@@ -610,7 +624,7 @@ function phot_arch_spbu_form_add($form, &$form_state) {
 function pa_ajax_link_response($type = 'ajax') {
   $output = t("1. JD Magnitude Magnutude_error<br>");
   $output = $output.t("2. JD Magnitude Magnutude_error Telescope<br>");
-  $output = $output.t("3. JD Magnitude Magnutude_error ... (22 rows)<br>");
+  $output = $output.t("3. JD Magnitude Magnutude_error ... (22 columns)<br>");
   $output = $output.t("4. JD P PA<br>");
   $output = $output.t("5. JD P PA Telescope<br>");
   $output = $output.t("6. JD Magnitude P PA<br>");
