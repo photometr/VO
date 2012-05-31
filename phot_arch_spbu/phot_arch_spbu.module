@@ -632,6 +632,7 @@ function pa_ajax_link_response($type = 'ajax') {
   $output = $output.t("8. JD Magnitude P P_error PA PA_error<br>");
   $output = $output.t("9. JD Magnitude P P_error PA PA_error Telescope<br>");
   $output = $output.t("10. JD Magnitude P P_error PA PA_error FWHM<br>");
+  $output = $output.t("11. JD Magnitude Magnutude_error P P_error PA PA_error Telescope<br>");
   if ($type == 'ajax') {
     $commands = array();
     // See ajax_example_advanced.inc for more details on the available commands
@@ -870,8 +871,8 @@ function phot_arch_spbu_entry_insert_polar($entry) {
     $value = trim ($value);
     if ($value == "") continue;
     $one_line  = preg_split("/[\s,]+/", $value);
-    if ( (count($one_line) < 3)||(count($one_line) > 7) ) {
-      drupal_set_message(t('Data string length must be >= 3 and <= 7'), 'error');
+    if ( (count($one_line) < 3)||(count($one_line) > 8) ) {
+      drupal_set_message(t('Data string length must be >= 3 and <= 8'), 'error');
       return NULL;
     }
     if (count($one_line) > 3){
@@ -952,6 +953,25 @@ function phot_arch_spbu_entry_insert_polar($entry) {
         $P_err[]    = floatval($one_line[3]);
         $PA[]       = floatval($one_line[4]);
         $PA_err[]   = floatval($one_line[5]);
+        $tel[]      = "Unknown";
+      }
+    }
+    // "JD m m_err P P_err PA PA_err tel"
+    if (count($one_line) == 8){
+      if (!(is_numeric($one_line[7]))) {
+        $JD[]       = floatval($one_line[0]);
+        $P[]        = floatval($one_line[3]);
+        $P_err[]    = floatval($one_line[4]);
+        $PA[]       = floatval($one_line[5]);
+        $PA_err[]   = floatval($one_line[6]);
+        $tel[]      = $one_line[7];
+      }
+      else {
+        $JD[]       = floatval($one_line[0]);
+        $P[]        = floatval($one_line[3]);
+        $P_err[]    = floatval($one_line[4]);
+        $PA[]       = floatval($one_line[5]);
+        $PA_err[]   = floatval($one_line[6]);
         $tel[]      = "Unknown";
       }
     }
