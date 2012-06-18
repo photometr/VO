@@ -857,11 +857,120 @@ function phot_arch_spbu_entry_insert_phot($entry) {
 }
 
 /**
+ * Save photometry entry in the database when submitted with polarimetric data
+ * This is very close to phot_arch_spbu_entry_insert_phot(), but i think it's
+ * better to separate them
+ */
+function phot_arch_spbu_entry_insert_phot_from_pol($entry,$IsWithMagErr) {
+  global $user;
+  $n_new_rows = 0;
+  $blazar_id = $entry['blazar_name'];
+  $band_id = 3;//FIXME dangerous written in phot_arch_spbu.install
+
+  //parsing data
+  $data_arr = preg_split("/((?<!\\\|\r)\n)|((?<!\\\)\r\n)/", $entry['data']);
+  foreach ($data_arr as $value) {
+    $value = trim ($value);
+    if ($value == "") continue;
+    $one_line  = preg_split("/[\s,]+/", $value);
+    if ( (count($one_line) < 3)||(count($one_line) > 8) ) {
+      drupal_set_message(t('Data string length must be >= 3 and <= 8'), 'error');
+      return NULL;
+    }
+    if ($IsWithMagErr) {
+      if (!(is_numeric($one_line[0]) &&
+            is_numeric($one_line[1]) &&
+            is_numeric($one_line[2]))) {
+        if ($one_line[1]=="NaN"){
+          //somtimes even Mag is not defined
+          continue;
+        }
+        else{
+          drupal_set_message(t('It seems that you give not numeric data.'), 'error');
+          return NULL;
+        }
+      }
+    }
+    else {
+      //Mag Err is not defined and we have Pol in the 3d column
+      if (!(is_numeric($one_line[0]) &&
+            is_numeric($one_line[1]))) {
+        if ($one_line[1]=="NaN"){
+          //somtimes even Mag is not defined
+          continue;
+        }
+        else{
+          drupal_set_message(t('It seems that you give not numeric data.'), 'error');
+          return NULL;
+        }
+      }
+      $one_line[2] = 999;
+    }
+    $old_entry_id = id_in_table_phot($one_line[0],$band_id,$blazar_id);
+    if($old_entry_id != NULL){
+      rewrite_entry($old_entry_id, $one_line, $user->uid);
+      continue;
+    }
+    else{
+      $JD[]       = floatval($one_line[0]);
+      $mag[]      = floatval($one_line[1]);
+      $mag_err[]  = floatval($one_line[2]);
+      if(!(is_numeric(end($one_line)))) {//WARNING not safe
+        //only in case of 4 rows tel is the last one
+        $tel[]      = end($one_line);
+      }
+      else{
+        $tel[]      = "Unknown";
+      }
+      $n_new_rows = $n_new_rows + 1;
+    }
+  }
+
+  if($n_new_rows < 1) return NULL;
+  $trans_value = db_transaction();
+  try {
+    //fill data table
+    for ( $i = 0; $i < count($JD); $i += 1) {
+        $data_entries[] = array(
+          'creator_id'  => $user->uid,
+          'blazar_id'   => $blazar_id,
+          'jd'          => $JD[$i],
+          'band_id'     => $band_id,
+          'mag'         => $mag[$i],
+          'mag_err'     => $mag_err[$i],
+          'tel'         => $tel[$i],
+        );
+    }
+    $query = db_insert('phot_arch_spbu_data')->fields(array(
+                                          'creator_id',
+                                          'blazar_id',
+                                          'jd',
+                                          'band_id',
+                                          'mag',
+                                          'mag_err',
+                                          'tel'
+                                          ));
+    foreach ($data_entries as $data_entry) {
+      $query->values($data_entry);
+    }
+    $query->execute();
+  }
+  catch (Exception $e) {
+    $trans_value->rollback();
+    drupal_set_message(t('db_insert failed. Message = %message, query= %query',
+      array('%message' => $e->getMessage(), '%query' => $e->query_string)), 'error');
+  }
+  return $query;
+}
+
+/**
  * Save polarimetry entry in the database.
  *
  */
 function phot_arch_spbu_entry_insert_polar($entry) {
   global $user;
+  $IsWithMag = False; //flag to run/not run phot_arch_spbu_entry_insert_phot_from_pol()
+  $IsWithMagErr = False;
   $n_new_rows = 0;
   $blazar_id = $entry['blazar_name'];
   $band_id = $entry['band'];
@@ -879,8 +988,10 @@ function phot_arch_spbu_entry_insert_polar($entry) {
       //if not "JD P PA" all but one must be numeric
       for ($i = 0; $i < count($one_line)-1; $i += 1) {
         if (!(is_numeric($one_line[$i]))) {
-          drupal_set_message(t('Only last data row can be literal.'), 'error');
-          return NULL;
+          if (!($one_line[$i]=="NaN")) {
+            drupal_set_message(t('Only last data row can be literal.'), 'error');
+            return NULL;
+          }
         }
       }
     }
@@ -936,6 +1047,7 @@ function phot_arch_spbu_entry_insert_polar($entry) {
       $PA[]       = floatval($one_line[4]);
       $PA_err[]   = floatval($one_line[5]);
       $tel[]      = "Unknown";
+      $IsWithMag = True;
     }
     // "JD m P P_err PA PA_err tel" or "JD m P P_err PA PA_err FWHM"
     if (count($one_line) == 7){
@@ -955,6 +1067,7 @@ function phot_arch_spbu_entry_insert_polar($entry) {
         $PA_err[]   = floatval($one_line[5]);
         $tel[]      = "Unknown";
       }
+      $IsWithMag = True;
     }
     // "JD m m_err P P_err PA PA_err tel"
     if (count($one_line) == 8){
@@ -974,6 +1087,8 @@ function phot_arch_spbu_entry_insert_polar($entry) {
         $PA_err[]   = floatval($one_line[6]);
         $tel[]      = "Unknown";
       }
+      $IsWithMag = True;
+      $IsWithMagErr = True;
     }
     //ready to write or rewrite
     $JDates  = array_values($JD);//just to prevent warnings
@@ -1026,6 +1141,10 @@ function phot_arch_spbu_entry_insert_polar($entry) {
     $trans_value->rollback();
     drupal_set_message(t('db_insert failed. Message = %message, query= %query',
       array('%message' => $e->getMessage(), '%query' => $e->query_string)), 'error');
+  }
+
+  if ($IsWithMag) {
+    phot_arch_spbu_entry_insert_phot_from_pol($entry,$IsWithMagErr);
   }
   return $query;
 }
