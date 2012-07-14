@@ -39,7 +39,7 @@ def OpenSession():
   return sess
 
 def CreateSession():
-  sess = session.DropboxSession(APP_KEY, APP_SECRET, ACCESS_TYPE)
+  sess = dropbox.session.DropboxSession(APP_KEY, APP_SECRET, ACCESS_TYPE)
   request_token = sess.obtain_request_token()
   url = sess.build_authorize_url(request_token)
   print "url:", url
@@ -75,7 +75,7 @@ def IsUpdated(fname,session):
   try:
     metadata = client.metadata(fname)
   except:
-    Log("File " + fname + " is not in the DB")
+    Log("File " + fname + " is not in the Dropbox")
     return False
   revision = metadata['revision']
   revisiondict = GetRevisDict()
