@@ -102,9 +102,12 @@ def ParseData(data):
     if line.strip() == "":
       continue
     sl = line.split()
-    date = float(sl[0])
-    mag = float(sl[1])
-    magerr = float(sl[2])
+    try:
+      date = float(sl[0])
+      mag = float(sl[1])
+      magerr = float(sl[2])
+    except ValueError:
+      continue
     datadict[date] = (mag,magerr)
   return datadict
 

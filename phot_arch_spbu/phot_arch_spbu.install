@@ -183,11 +183,6 @@ function phot_arch_spbu_schema() {
   $schema['phot_arch_spbu_data'] = array(
     'description' => 'Stores photometry data.',
     'fields' => array(
-      'id'  => array(
-        'type' => 'serial',
-        'not null' => TRUE,
-        'description' => 'Primary Key: Unique data point ID.',
-      ),
       'creator_id' => array(
         'type' => 'int',
         'not null' => TRUE,
@@ -222,18 +217,11 @@ function phot_arch_spbu_schema() {
       ),
       'tel' => array(
         'type' => 'varchar',
-        'length' => 2048,
+        'length' => 20,
         'not null' => TRUE,
         'default' => '',
         'description' => 'Telescope name.',
       ),
-    ),
-    'primary key' => array('id'),
-    'indexes' => array(
-      'jd'         => array('jd'),
-      'mag'        => array('mag'),
-      'mag_err'    => array('mag_err'),
-      'tel'        => array('tel'),
     ),
     'foreign keys' => array(
       'blazar_id' => array(
@@ -249,6 +237,7 @@ function phot_arch_spbu_schema() {
         'columns' => array('creator_id' => 'uid'),
       ),
     ),
+    'primary key' => array('jd','band_id','tel'),
   );
 
   $schema['phot_arch_spbu_polar'] = array(
