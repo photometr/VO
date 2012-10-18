@@ -144,6 +144,7 @@ def plot(objname,objsafename,data):
   plt.ylabel('R (mag)')
   plt.xlabel('JD - 2400000')
   plt.savefig(imagpath + objsafename + "R.png",bbox_inches='tight')
+  plt.close(fig)
   return 0
   
 def main():
