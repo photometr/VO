@@ -1,1 +1,4 @@
-Modules for our site
+phot_arch is a drupal module for our site
+
+dbdbsynch is a synchroniser between dropbox and DB of out site
+plots     is a plotting tool which uses data from the DB

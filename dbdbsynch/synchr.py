@@ -6,7 +6,7 @@ import sys
 import dbmanager
 from objects import objects
 import sys
-sys.path.append("/home/eti/install")
+sys.path.append("/home/blinov/installed")
 #from dropbox import client, rest, session
 import dropbox
 
@@ -16,7 +16,7 @@ APP_SECRET = ''
 # ACCESS_TYPE should be 'dropbox' or 'app_folder' as configured for your app
 ACCESS_TYPE = 'dropbox'
 folder = "Larionovy/SPb optical/"
-filters = {"B":"B","V":"V","Rc":"R","Ic":"I","Pol":"RP"}
+filters = [["B","B"],["V","V"],["Rc","R"],["Ic","I"],["Rc","RP"]]
 
 def Log(msg):
   fop = open('synchr.log','a')
@@ -39,7 +39,7 @@ def OpenSession():
   return sess
 
 def CreateSession():
-  sess = session.DropboxSession(APP_KEY, APP_SECRET, ACCESS_TYPE)
+  sess = dropbox.session.DropboxSession(APP_KEY, APP_SECRET, ACCESS_TYPE)
   request_token = sess.obtain_request_token()
   url = sess.build_authorize_url(request_token)
   print "url:", url
@@ -75,7 +75,7 @@ def IsUpdated(fname,session):
   try:
     metadata = client.metadata(fname)
   except:
-    Log("File " + fname + " is not in the DB")
+    Log("File " + fname + " is not in the Dropbox")
     return False
   revision = metadata['revision']
   revisiondict = GetRevisDict()
@@ -92,7 +92,7 @@ def IsUpdated(fname,session):
 
 def GenFN(obj,tel,filt):
   preffix = objects[obj]["filepreff"]
-  fname = preffix+filters[filt]+".DAT"
+  fname = preffix+filt+".DAT"
   return os.path.join(folder,tel,obj,fname)
 
 def ParseData(data):
@@ -102,9 +102,12 @@ def ParseData(data):
     if line.strip() == "":
       continue
     sl = line.split()
-    date = float(sl[0])
-    mag = float(sl[1])
-    magerr = float(sl[2])
+    try:
+      date = float(sl[0])
+      mag = float(sl[1])
+      magerr = float(sl[2])
+    except ValueError:
+      continue
     datadict[date] = (mag,magerr)
   return datadict
 
@@ -125,10 +128,12 @@ def WriteNewRevis(fname,metadata):
   fop.write(fname + "|" + str(revision))
   fop.close()
 
-def UpdateDB(obj,tel,filt,session):
+def UpdateDB(obj,tel,fname,session,filt):
   client = dropbox.client.DropboxClient(session)
-  fname = GenFN(obj,tel,filt)
-  f, metadata = client.get_file_and_metadata(fname)
+  try:
+    f, metadata = client.get_file_and_metadata(fname)
+  except:
+    return 1
   data = ParseData(f.read())
   dbmanager.WriteToDB(objects[obj]["dbname"],tel,filt,data)
   WriteNewRevis(fname,metadata)
@@ -136,9 +141,12 @@ def UpdateDB(obj,tel,filt,session):
 def DownloadData(session):
   for obj in objects.keys():
     for tel in ["AZT-8","LX-200"]:
-      for filt in filters.keys():
-	if IsUpdated(GenFN(obj,tel,filt),session):
-	  UpdateDB(obj,tel,filt,session)
+      for filtnames in filters:
+	filtdbasename    = filtnames[0]
+	filtdropboxname = filtnames[1]
+	curfname = GenFN(obj,tel,filtdropboxname)
+	if IsUpdated(curfname,session):
+	  UpdateDB(obj,tel,curfname,session,filtdbasename)
       
 
 def main():
