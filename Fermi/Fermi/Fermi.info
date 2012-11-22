@@ -1,0 +1,7 @@
+name = Fermi data representation
+description = Module allowing to show and extract gamma-ray data.
+package = VO
+core = 7.x
+files[] = Fermi.test
+
+

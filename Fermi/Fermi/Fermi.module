@@ -1,0 +1,278 @@
+<?php
+/**
+ * @defgroup Fermi
+ * @ingroup VO
+ * @{
+ * General documentation is available at
+ * @link database.inc database abstraction layer documentation @endlink and
+ * at @link http://drupal.org/node/310069 Database API @endlink.
+ *
+ */
+
+/**
+ * Implements hook_help().
+ *
+ * Show some help on each form provided by this module.
+ */
+function Fermi_help($path) {
+  $output = '';
+  switch ($path) {
+    case 'VO/Fermi':
+      $output = t('Here you may download Fermi Lat fluxes for blazars of our program.');
+      $output .= t(' We analyze the LAT data in theenergy range between 100 MeV and 200 GeV,
+      using the standard analysis software package Science Tools
+      v9r27p1, with the instrument response function P7SOURCE_V6, the Galactic
+      diffuse emission model gal_2yearp7v6_v0, and the isotropic background model
+      iso_p7v6source. The background models included all sources from the 2FGL within
+      15 deg. The spectrum of blazar as well as spectra of all background
+      sources is modelled as power-law with photon index fixed to the 2FGL catalogvalues.');
+      $output .= t("<br><font color='red'>Disclaimer: these results are automatically updated and may be fallible. 
+      Do not use these data for serious purposes.</font>");
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function Fermi_menu() {
+  $items = array();
+
+  $items['VO/Fermi'] = array(
+    'title' => "Fermi LAT gamma flux data for selected blazars",
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('Fermi_form_get'),
+    'access callback' => TRUE
+  );
+  return $items;
+}
+
+function Fermi_form_get($form, &$form_state) {
+  drupal_add_js('misc/dygraphs/dygraph-dev.js');
+
+  // Get the list of options to populate the first dropdown.
+  $blazars_names = Fermi_blazars_list_load();
+  // If we have a value for the first dropdown from $form_state['values'] we use
+  // this both as the default value for the first dropdown and also as a
+  // parameter to pass to the function that retrieves the options for the
+  // second dropdown.
+  $selected = isset($form_state['values']['name']) ? $form_state['values']['name'] : key($blazars_names);
+
+  $form['name_fieldset'] = array(
+    '#type' => 'fieldset',
+  );
+  $form['name_fieldset']['name'] = array(
+    '#type' => 'select',
+    '#title' => 'Blazar:',
+    '#options' => $blazars_names,
+    '#attributes' => array('class' => array('enabled-for-ajax')),
+
+    // The '#ajax' property allows us to bind a callback to the server whenever this
+    // form element changes. See ajax_example_autocheckboxes and
+    // ajax_example_dependent_dropdown in ajax_example.module for more details.
+    '#ajax' => array(
+      'callback' => 'Fermi_name_dropdown_callback',
+      'wrapper' => 'JD-replace',
+    ),
+  );
+  $form['JD_fieldset'] = array(
+    '#type' => 'fieldset',
+    '#prefix' => '<div id="JD-replace">',
+    '#suffix' => '</div>',
+  );
+  $form['JD_fieldset']['JDstart'] = array(
+    '#type'  => 'textfield',
+    '#title' => t('From MJD:'),
+    '#size'  => 10,
+    '#attributes' => array('class' => array('enabled-for-ajax')),
+    '#default_value' => '',
+  );
+  $form['JD_fieldset']['JDend'] = array(
+    '#type'  => 'textfield',
+    '#title' => t('To MJD:'),
+    '#size'  => 10,
+    '#description' => t('leave these fields blank if you want the whole time range'),
+  );
+  $form['JD_fieldset']['plot'] = array(
+    '#prefix' => '<div id="plot_div">',
+    '#suffix' => '</div>',
+    '#attributes' => array('class' => array('enabled-for-ajax')),
+  );
+  $form['JD_fieldset']['ASCII'] = array(
+    '#type' => 'submit',
+    '#value' => t('Download data'),
+    '#submit' => array('Fermi_form_get_ASCII_submit'),
+    // This class allows attached js file to override the disabled attribute,
+    // since it's not necessary in ajax-enabled form.
+    '#attributes' => array('class' => array('enabled-for-ajax')),
+  );
+
+  // Disable band if a selection has not been made on dropdown_first.
+  if (empty($form_state['values']['name'])) {
+    $form['JD_fieldset']['JDstart']['#disabled'] = TRUE;
+    $form['JD_fieldset']['JDend']['#disabled'] = TRUE;
+    $form['JD_fieldset']['ASCII']['#disabled'] = TRUE;
+    $form['JD_fieldset']['VOT']['#disabled'] = TRUE;
+    $form['JD_fieldset']['bibtex']['#disabled'] = TRUE;
+  }
+
+  return $form;
+}
+
+/** Loading list of blazar names from DB */
+function Fermi_blazars_list_load() {
+  // Read all fields from the phot_arch_spbu_objects table.
+  $result = db_query('SELECT id,name FROM Fermi_objects');
+  $entries = $result->fetchAll();
+  $blazars_with_id = array();
+  foreach ($entries as $entry) {
+    $blazars_with_id[$entry->id] = $entry->name;
+  }
+  return $blazars_with_id;
+}
+
+function Fermi_name_dropdown_callback($form, $form_state) {
+  $form['JD_fieldset']['plot']['#markup'] = Fermi_get_plot_code($form, $form_state);
+  return $form['JD_fieldset'];//['band'];
+}
+
+/** */
+function Fermi_get_plot_code($form, $form_state) {
+  $blazar_id = $form_state['values']['name'];
+  $code = file_get_contents('./sites/all/modules/Fermi/plot_fermi_js');
+  $txt = Fermi_get_data_for_plot($blazar_id,$band);
+  $code = $code.$txt;
+  $code = $code.'<div style="float: right; display: none">';
+  $code = $code.'<p>Zoomed: <span id="zoomed">False</span><p/>';
+  $code = $code.'<p>Zoomed X: <span id="zoomedX">False</span><p/>';
+  $code = $code.'<p>Zoomed Y: <span id="zoomedY">False</span><p/></div>';
+  $code = $code.'<div id="div_g" style="margin-top:20px; margin-bottom:20px; margin-left:20px; width:800px; height:400px;"></div>';
+  return $code;
+}
+
+/** Creates javascript with data for dygraphs library
+    in case of photometric data request
+*/
+function Fermi_get_data_for_plot($blazar_id,$band) {
+  $query = "SELECT jd, flux, flux_err, upp_lim FROM Fermi_data WHERE blazar_id = '";
+  $query = $query.$blazar_id."'";
+  $entries = db_query($query)->fetchAll();
+  $js_data = '<script type="text/javascript">';
+  $js_data = $js_data.'function data_nolabel(){';
+  $js_data = $js_data.'return "" +';
+  foreach ($entries as $entry){
+    //$js_data = $js_data.'"'.$entry->jd.','.pow(10,6)*$entry->flux.'\n" + ';
+    if ($entry->upp_lim == NULL) {
+      $js_data = $js_data.'"'.$entry->jd.','.pow(10,6)*$entry->flux.',\n" + ';
+    }
+    else{
+      $js_data = $js_data.'"'.$entry->jd.',,'.pow(10,6)*$entry->upp_lim.'\n" + ';
+    }
+  }
+  $js_data = rtrim($js_data,' + ');
+  $js_data = $js_data.';}function data() {';
+  $js_data = $js_data.'return "Date,Flux,Upper\n" + data_nolabel();';
+  $js_data = $js_data.'}</script>';
+
+  return $js_data;
+}
+
+/**
+ * Query to the database to get gamma data for download.
+ */
+function Fermi_data_load($form, $form_state) {
+  $blazar_id = $form_state['values']['name'];
+  $JDstart   = $form_state['values']['JDstart'];
+  $JDend     = $form_state['values']['JDend'];
+
+  if (empty($JDstart)) $JDstart = 0;
+  if (empty($JDend))   $JDend   = 2500000; //Just a big number
+
+  // Read all fields from the phot_arch_spbu_data table.
+  $select = db_select('Fermi_data', 'c');
+  $select->fields('c')
+         ->condition('blazar_id', $blazar_id,'=')
+         ->condition('jd', $JDstart,'>=')
+         ->condition('jd', $JDend,'<=');
+
+  // Return the result in object format.
+  return $select->execute()->fetchAll();
+}
+
+function Fermi_file_download($filename, $mimetype='application/octet-stream') {
+  if (file_exists($filename)) {
+    header($_SERVER["SERVER_PROTOCOL"] . ' 200 OK');
+    header('Content-Type: ' . $mimetype);
+    header('Last-Modified: ' . gmdate('r', filemtime($filename)));
+    header('ETag: ' . sprintf('%x-%x-%x', fileinode($filename), filesize($filename), filemtime($filename)));
+    header('Content-Length: ' . (filesize($filename)));
+    header('Connection: close');
+    header('Content-Disposition: attachment; filename="' . basename($filename) . '";');
+// Открываем искомый файл
+    $f=fopen($filename, 'r');
+    while(!feof($f)) {
+// Читаем килобайтный блок, отдаем его в вывод и сбрасываем в буфер
+      echo fread($f, 1024);
+      flush();
+    }
+// Закрываем файл
+    fclose($f);
+  } else {
+    header($_SERVER["SERVER_PROTOCOL"] . ' 404 Not Found');
+    header('Status: 404 Not Found');
+  }
+  exit;
+}
+
+/**
+ * Get ascii data from the database.
+ */
+function Fermi_form_get_ASCII_submit($form, &$form_state) {
+  //obtaining response from DB
+  if ($entries = Fermi_data_load($form, $form_state)) {
+    $rows = array();
+    $i = 0;
+    $rows[] = "#N     MDJ         Flux      Flux_Err       Index     IdxErr     UpperLimit  TS_VALUE   Prefactor   Pref_Err     T_START    T_STOP    NPRED\r\n";
+    foreach ($entries as $entry) {
+      //$variables = get_object_vars($entry);
+      $i = $i + 1;
+      $row_el = sprintf(" %d ", $i);
+      $row_el = $row_el.sprintf("%5.5f ", $entry->jd);
+      $row_el = $row_el.sprintf("%9s ",sprintf("%1.6e ", $entry->flux));
+      $row_el = $row_el.sprintf("%8s ",sprintf("%1.4e ", $entry->flux_err));
+      $row_el = $row_el.sprintf("%9s ",sprintf("%1.6e ", $entry->ind));
+      $row_el = $row_el.sprintf("%9s ",sprintf("%1.4e ", $entry->index_err));
+      if ($entry->upp_lim < 1e-20) {
+        $row_el = $row_el."  Ignored    ";
+      }
+      else {
+        $row_el = $row_el.sprintf("%9s ",sprintf("%1.6e ", $entry->upp_lim));
+      }
+      $row_el = $row_el.sprintf("%9s ",sprintf("%1.3e ", $entry->ts_value));
+      $row_el = $row_el.sprintf("%9s ",sprintf("%1.6e ", $entry->prefactor));
+      $row_el = $row_el.sprintf("%9s ",sprintf("%1.4e ", $entry->pref_err));
+      $row_el = $row_el.sprintf("%9s ",sprintf("%d ", $entry->t_start));
+      $row_el = $row_el.sprintf("%9s ",sprintf("%d ", $entry->t_stop));
+      $row_el = $row_el.sprintf("%9s ",sprintf("%1.3e\r\n", $entry->npred));
+      $rows[] = $row_el;
+    }
+  }
+  else {
+    drupal_set_message(t('No entries in DB available for this query.'));
+  }
+  $output = "";
+  foreach ($rows as $row) {
+    $output = $output.$row;
+  }
+
+  $blazar_name = $form['name_fieldset']['name']['#options'][$form_state['values']['name']];
+  //creating a file with data
+  $filepath = file_unmanaged_save_data($output, $destination = "public://".$blazar_name."_gamma.dat", $replace = FILE_EXISTS_REPLACE);
+  Fermi_file_download($filepath);
+}
+
+/**
+ * @} End of "defgroup Fermi".
+ */
+

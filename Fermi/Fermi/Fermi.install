@@ -1,0 +1,199 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the Fermi module.
+ */
+
+/**
+ * Implements hook_install().
+ *
+ * In Drupal 7, there is no need to install schema using this hook, the schema
+ * is already installed before this hook is called.
+ *
+ * We will create a default entry in the database.
+ *
+ * @see hook_install()
+ * @ingroup Fermi
+ */
+function Fermi_install() {
+  // Outside of the .install file we would use drupal_write_record() to
+  // populate the database, but it cannot be used here, so we'll use
+  // db_insert().
+
+  // Add a default entry.
+  $fields = array(
+    'name'    => 'BL Lacertae',
+  );
+  db_insert('Fermi_objects')
+    ->fields($fields)
+    ->execute();
+
+  $fields = array(
+    'name'    => 'OJ 287',
+  );
+  db_insert('Fermi_objects')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'name'    => 'S5 0716+71',
+  );
+  db_insert('Fermi_objects')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'name'    => '3C 454.3',
+  );
+  db_insert('Fermi_objects')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'name'    => '3C 273',
+  );
+  db_insert('Fermi_objects')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'name'    => 'CTA102',
+  );
+  db_insert('Fermi_objects')
+    ->fields($fields)
+    ->execute();
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * As in hook_install, there is no need to uninstall schema, Drupal will do it
+ * for us.
+ *
+ * @see hook_uninstall()
+ * @ingroup Fermi
+ */
+function Fermi_uninstall() {
+  // nothing.
+}
+
+
+/**
+ * Implements hook_schema().
+ *
+ * Defines the database tables used by this module.
+ * Remember that the easiest way to create the code for hook_schema is with
+ * the @link http://drupal.org/project/schema schema module @endlink
+ *
+ * @see hook_schema()
+ * @ingroup Fermi
+ */
+function Fermi_schema() {
+
+  $schema['Fermi_objects'] = array(
+    'description' => 'Stores blazars names and additional info.',
+    'fields' => array(
+      'id'  => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique blazar ID.',
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'Name of the blazar.',
+      ),
+    ),
+    'primary key' => array('id'),
+    'indexes' => array(
+      'name'    => array('name'),
+    ),
+  );
+
+  $schema['Fermi_data'] = array(
+    'description' => 'Stores gamma data.',
+    'fields' => array(
+      'id'  => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique data point ID.',
+      ),
+      'blazar_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => "Blazar ID from {Fermi_objects}.id",
+      ),
+      'jd' => array(
+        'type' => 'float',
+        'size' => 'big',
+        'not null' => TRUE,
+        'description' => 'Julian date of the observation.',
+      ),
+      'flux' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Gamma flux.',
+      ),
+      'flux_err' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Gamma flux error.',
+      ),
+      'ind' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Spectral index.',
+      ),
+      'index_err' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Spectral index error.',
+      ),
+      'upp_lim' => array(
+        'type' => 'float',
+        'not null' => FALSE,
+        'description' => 'Upper limit error.',
+      ),
+      'ts_value' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'TS_VALUE.',
+      ),
+      'prefactor' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Prefactor.',
+      ),
+      'pref_err' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Prefactor error.',
+      ),
+      't_start' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'T_START.',
+      ),
+      't_stop' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'T_STOP.',
+      ),
+      'npred' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'NPRED.',
+      ),
+    ),
+    'primary key' => array('id'),
+    'indexes' => array(
+      'jd'         => array('jd'),
+      'flux'        => array('flux'),
+      'flux_err'    => array('flux_err')
+    ),
+    'foreign keys' => array(
+      'blazar_id' => array(
+        'table'   => 'Fermi_objects',
+        'columns' => array('blazar_id' => 'id'),
+      ),
+    ),
+  );
+  return $schema;
+}

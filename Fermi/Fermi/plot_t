@@ -1,0 +1,168 @@
+<script type="text/javascript">
+(function ($) {
+  // Store our function as a property of Drupal.behaviors.
+  Drupal.behaviors.myModuleSecureLink = {
+    attach: function (context, settings) {
+    var errData = "Date,Flux,High,Low\n" +
+  "5.53775000E+04,392.00,394.63,389.38\n" + 
+  "5.53875000E+04,389.00,390.94,386.76\n" + 
+  "5.54245000E+04,406.00,408.25,401.34\n" + 
+  "5.55375000E+04,491.00,497.62,488.55\n" + 
+  "5.55475000E+04,499.00,503.83,497.09\n" + 
+  "5.56275000E+04,504.00,509.56,502.00\n" ;
+      g = new Dygraph(
+            document.getElementById("div_g"),
+            errData, {
+              //errorBars: true,
+              plotter: candlePlotter,
+              drawPoints: true,
+              zoomCallback : function(minDate, maxDate, yRange) {
+                showDimensions(minDate, maxDate, yRange);
+              },
+              axes: {
+//               x: {
+//                   valueFormatter: function(x) {
+//                     return x;
+//                   },
+//                   axisLabelFormatter: function(x) {
+//                     return x.toFixed(2);
+//                   }
+//                  },
+              y: {
+                  valueFormatter: function(y) {
+                    return y;
+                  },
+                  axisLabelFormatter: function(y) {
+                    return 1.0*y.toFixed(2);
+                  }
+                 }
+              },
+              ylabel: 'Flux (10<sup>-6</sup> ph cm<sup>-2</sup> s<sup>-1</sup>)',
+              xlabel: 'JD',
+              drawCallback: function(me, initial) {
+                document.getElementById("zoomed").innerHTML = "" + me.isZoomed();
+                document.getElementById("zoomedX").innerHTML = "" + me.isZoomed("x");
+                document.getElementById("zoomedY").innerHTML = "" + me.isZoomed("y");
+              }
+            }
+          );
+
+      // TODO(konigsberg): Implement a visualization that verifies that initial
+      // displays also show correctly.
+
+      // Pull an initial value for logging.
+      var minDate = g.xAxisRange()[0];
+      var maxDate = g.xAxisRange()[1];
+      var minValue = g.yAxisRange()[0];
+      var maxValue = g.yAxisRange()[1];
+      showDimensions(minDate, maxDate, [minValue, maxValue]);
+function candlePlotter(g) {
+        // This is the officially endorsed way to plot all the series at once.
+        if (g.seriesIndex !== 0) return;
+
+        var setCount = g.seriesCount;
+        if (setCount != 3) {
+          throw "Exactly 3 prices each point must be provided for candle chart (open close high low)";
+        }
+
+        var prices = [];
+        var price;
+        var sets = g.allSeriesPoints;
+        for (var p = 0 ; p < sets[0].length; p++) {
+          price = {
+            open : sets[0][p].yval,
+            high : sets[1][p].yval,
+            low : sets[2][p].yval,
+            openY : sets[0][p].y,
+            highY : sets[1][p].y,
+            lowY : sets[2][p].y
+          };
+          prices.push(price);
+        }
+
+        var area = g.plotArea;
+        var ctx = g.drawingContext;
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 0.6;
+
+        for (p = 0 ; p < prices.length; p++) {
+          ctx.beginPath();
+
+          price = prices[p];
+          var topY = area.h * price.highY + area.y;
+          var bottomY = area.h * price.lowY + area.y;
+          var centerX = area.x + sets[0][p].x * area.w;
+          ctx.moveTo(centerX, topY);
+          ctx.lineTo(centerX, bottomY);
+          ctx.closePath();
+          ctx.stroke();
+          var bodyY;
+
+          ctx.fillStyle ='rgba(44,244,44,1.0)';
+          bodyY = area.h * price.openY  + area.y;
+          var bodyHeight = area.h * Math.abs(price.openY - price.openY);
+        }
+
+}
+      function showDimensions(minDate, maxDate, yRanges) {
+        setJDstart(minDate);
+        setJDend(maxDate);
+      }
+
+      function setJDstart(JDstart) {
+        var elem = document.getElementById("edit-jdstart");
+        if (elem) elem.setAttribute("value",JDstart);
+        for(var i = 1; i < 100; ++i){
+             elem = document.getElementById("edit-jdstart--" + i);
+             if (elem) elem.setAttribute("value",JDstart);
+        }
+      }
+
+      function setJDend(JDend) {
+        var elem = document.getElementById("edit-jdend");
+        if (elem) elem.setAttribute("value",JDend);
+        for(var i = 1; i < 100; ++i){
+             elem = document.getElementById("edit-jdend--" + i);
+             if (elem) elem.setAttribute("value",JDend);
+        }
+      }
+
+      function zoomGraphX(minDate, maxDate) {
+        g.updateOptions({
+          dateWindow: [minDate, maxDate]
+        });
+        showXDimensions(minDate, maxDate);
+      }
+
+      function zoomGraphY(minValue, maxValue) {
+        g.updateOptions({
+          valueRange: [minValue, maxValue]
+        });
+        showYDimensions(g.yAxisRanges());
+      }
+
+      function unzoomGraph() {
+        g.updateOptions({
+          dateWindow: null,
+          valueRange: null
+        });
+      }
+
+      function panEdgeFraction(value) {
+        g.updateOptions({ panEdgeFraction : value });
+      }
+
+    }
+    
+  }
+
+  // You could add additional behaviors here.
+  Drupal.behaviors.myModuleMagic = {
+    attach: function (context, settings) { },
+    detach: function (context, settings) { }
+  };
+}(jQuery));
+
+
+
+</script>

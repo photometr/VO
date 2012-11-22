@@ -1,0 +1,117 @@
+<script type="text/javascript">
+(function ($) {
+
+  // Store our function as a property of Drupal.behaviors.
+  Drupal.behaviors.myModuleSecureLink = {
+    attach: function (context, settings) {
+      g = new Dygraph(
+            document.getElementById("div_g"),
+            data, {
+              //errorBars: false,
+              drawPoints: true,
+              strokeWidth: 0,
+              pointSize : 2,
+              colors: ['#0000FF', '#FF0000'],
+              zoomCallback : function(minDate, maxDate, yRange) {
+                showDimensions(minDate, maxDate, yRange);
+              },
+              axes: {
+//               x: {
+//                   valueFormatter: function(x) {
+//                     return x;
+//                   },
+//                   axisLabelFormatter: function(x) {
+//                     return x.toFixed(2);
+//                   }
+//                  },
+              y: {
+                  valueFormatter: function(y) {
+                    return y;
+                  },
+                  axisLabelFormatter: function(y) {
+                    return 1.0*y.toFixed(2);
+                  }
+                 }
+              },
+              ylabel: 'Flux (10<sup>-6</sup> ph cm<sup>-2</sup> s<sup>-1</sup>)',
+              xlabel: 'MJD',
+              drawCallback: function(me, initial) {
+                document.getElementById("zoomed").innerHTML = "" + me.isZoomed();
+                document.getElementById("zoomedX").innerHTML = "" + me.isZoomed("x");
+                document.getElementById("zoomedY").innerHTML = "" + me.isZoomed("y");
+              }
+            }
+          );
+
+      // TODO(konigsberg): Implement a visualization that verifies that initial
+      // displays also show correctly.
+
+      // Pull an initial value for logging.
+      var minDate = g.xAxisRange()[0];
+      var maxDate = g.xAxisRange()[1];
+      var minValue = g.yAxisRange()[0];
+      var maxValue = g.yAxisRange()[1];
+      showDimensions(minDate, maxDate, [minValue, maxValue]);
+
+      function showDimensions(minDate, maxDate, yRanges) {
+        setJDstart(minDate);
+        setJDend(maxDate);
+      }
+
+      function setJDstart(JDstart) {
+        var elem = document.getElementById("edit-jdstart");
+        if (elem) elem.setAttribute("value",JDstart);
+        for(var i = 1; i < 100; ++i){
+             elem = document.getElementById("edit-jdstart--" + i);
+             if (elem) elem.setAttribute("value",JDstart);
+        }
+      }
+
+      function setJDend(JDend) {
+        var elem = document.getElementById("edit-jdend");
+        if (elem) elem.setAttribute("value",JDend);
+        for(var i = 1; i < 100; ++i){
+             elem = document.getElementById("edit-jdend--" + i);
+             if (elem) elem.setAttribute("value",JDend);
+        }
+      }
+
+      function zoomGraphX(minDate, maxDate) {
+        g.updateOptions({
+          dateWindow: [minDate, maxDate]
+        });
+        showXDimensions(minDate, maxDate);
+      }
+
+      function zoomGraphY(minValue, maxValue) {
+        g.updateOptions({
+          valueRange: [minValue, maxValue]
+        });
+        showYDimensions(g.yAxisRanges());
+      }
+
+      function unzoomGraph() {
+        g.updateOptions({
+          dateWindow: null,
+          valueRange: null
+        });
+      }
+
+      function panEdgeFraction(value) {
+        g.updateOptions({ panEdgeFraction : value });
+      }
+
+    }
+    
+  }
+
+  // You could add additional behaviors here.
+  Drupal.behaviors.myModuleMagic = {
+    attach: function (context, settings) { },
+    detach: function (context, settings) { }
+  };
+}(jQuery));
+
+
+
+</script>
