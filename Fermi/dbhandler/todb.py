@@ -7,20 +7,28 @@ import objects
 
 objname = sys.argv[1]
 
-spinderr = {"S50716"  : 0.02143,
+spinderr = {"1ES0647" : 0.08315,
+            "AO0235"  : 0.02474,
+            "B30650"  : 0.03941,
+            "S50716"  : 0.02143,
             "S40954"  : 0.06723,
+            "CTA26"   : 0.07156,
             "CTA102"  : 0.06691,
             "3C454"   : 0.00806,
+            "3C279"   : 0.01881,
             "BLLac"   : 0.03569,
             "Q1633"   : 0.02759,
             "PKS1510" : 0.01428,
             "3C66A"   : 0.02386,
+            "3C84"    : 0.02187,
             "WCOM"    : 0.03435,
             "3C273"   : 0.02185,
             "S41030"  : 0.03146,
             "3C345"   : 0.05606,
             "OT081"   : 0.06486,
+            "OJ287"   : 0.04331,
             "PKS0420" : 0.02840,
+            "PKS0735" : 0.03495, 
             "Q1156"   : 0.02703,
             "Q0836"   : 0.07301,
             }
@@ -50,7 +58,7 @@ def Log(msg):
 
 def parsefile():
   data = []
-  fop = open(objname+".dat")
+  fop = open("./data/"+objname+".dat")
   for line in fop.readlines():
     p = point()
     if line.startswith("#"):
@@ -94,6 +102,14 @@ def Replace(db,cursor,data,blazar_id):
   fields = []
   for p in data:
     fields.append((blazar_id,p.MJD,p.Flux,p.Flux_Err,p.Index,p.IdxErr,p.UpperLimit,p.TS_VALUE,p.Prefactor,p.Pref_Err,p.T_START,p.T_STOP,p.NPRED))
+
+  try:
+    sql = "DELETE FROM Fermi_data WHERE blazar_id = " + str(blazar_id) + " ;"
+    cursor.execute(sql)
+  except:
+    errmsg = "Smth wrong on delete of " + objname
+    Log(errmsg)
+    return 1
 
   try:
     cursor.executemany("""REPLACE INTO Fermi_data (blazar_id, jd, flux, flux_err, ind, index_err, upp_lim, ts_value, prefactor, pref_err, t_start, t_stop,npred) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", fields)
