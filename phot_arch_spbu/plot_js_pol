@@ -1,0 +1,110 @@
+<script type="text/javascript">
+(function ($) {
+  // Store our function as a property of Drupal.behaviors.
+  Drupal.behaviors.myModuleSecureLink = {
+    attach: function (context, settings) {
+      var blockRedraw = false;
+      var initialized = false;
+      gall = [];
+//   Polarization Degree handling starts here     
+      gp = new Dygraph(
+            document.getElementById("div_gp"),
+            datap, {
+              //errorBars: true,
+              drawPoints: true,
+              zoomCallback : function(minDate, maxDate, yRange) {
+                showDimensions(minDate, maxDate, yRange);
+              },
+              axes: {
+              },
+              ylabel: 'Polarization Degree (%)',
+              xlabel: 'JD',
+              drawCallback: function(me, initial) {
+                if (blockRedraw || initial) return;
+                blockRedraw = true;
+                var range = me.xAxisRange();
+                for (var j = 0; j < 2; j++) {
+                  if (gall[j] == me) continue;
+                  gall[j].updateOptions( {
+                    dateWindow: range,
+                  } );
+                }
+                blockRedraw = false;
+                document.getElementById("zoomed").innerHTML = "" + me.isZoomed();
+                document.getElementById("zoomedX").innerHTML = "" + me.isZoomed("x");
+                document.getElementById("zoomedY").innerHTML = "" + me.isZoomed("y");
+              }
+            }
+          );
+
+//   Polarization Position Angle handling starts here
+      gpa = new Dygraph(
+            document.getElementById("div_gpa"),
+            datapa, {
+              //errorBars: true,
+              drawPoints: true,
+              zoomCallback : function(minDate, maxDate, yRange) {
+                showDimensions(minDate, maxDate, yRange);
+              },
+              axes: {
+              },
+              ylabel: 'EVPA (deg)',
+              xlabel: 'JD',
+              drawCallback: function(me, initial) {
+                if (blockRedraw || initial) return;
+                blockRedraw = true;
+                var range = me.xAxisRange();
+                for (var j = 0; j < 2; j++) {
+                  if (gall[j] == me) continue;
+                  gall[j].updateOptions( {
+                    dateWindow: range,
+                  } );
+                }
+                blockRedraw = false;
+                document.getElementById("zoomed").innerHTML = "" + me.isZoomed();
+                document.getElementById("zoomedX").innerHTML = "" + me.isZoomed("x");
+                document.getElementById("zoomedY").innerHTML = "" + me.isZoomed("y");
+              }
+            }
+          );
+      gall.push(gp);
+      gall.push(gpa);
+      // Pull an initial value for logging.
+      var minDate = gp.xAxisRange()[0];
+      var maxDate = gp.xAxisRange()[1];
+      var minValue = gp.yAxisRange()[0];
+      var maxValue = gp.yAxisRange()[1];
+      showDimensions(minDate, maxDate, [minValue, maxValue]);
+
+      function showDimensions(minDate, maxDate, yRanges) {
+        setJDstart(minDate);
+        setJDend(maxDate);
+      }
+
+      function setJDstart(JDstart) {
+        var elem = document.getElementById("edit-jdstart");
+        if (elem) elem.setAttribute("value",JDstart);
+        for(var i = 1; i < 100; ++i){
+             elem = document.getElementById("edit-jdstart--" + i);
+             if (elem) elem.setAttribute("value",JDstart);
+        }
+      }
+
+      function setJDend(JDend) {
+        var elem = document.getElementById("edit-jdend");
+        if (elem) elem.setAttribute("value",JDend);
+        for(var i = 1; i < 100; ++i){
+             elem = document.getElementById("edit-jdend--" + i);
+             if (elem) elem.setAttribute("value",JDend);
+        }
+      }
+    }
+  }
+
+  // You could add additional behaviors here.
+  Drupal.behaviors.myModuleMagic = {
+    attach: function (context, settings) { },
+    detach: function (context, settings) { }
+  };
+}(jQuery));
+</script>

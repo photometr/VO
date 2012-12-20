@@ -1,0 +1,317 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the phot_arch_spbu module.
+ */
+
+/**
+ * Implements hook_install().
+ *
+ * In Drupal 7, there is no need to install schema using this hook, the schema
+ * is already installed before this hook is called.
+ *
+ * We will create a default entry in the database.
+ *
+ * @see hook_install()
+ * @ingroup phot_arch_spbu
+ */
+function phot_arch_spbu_install() {
+  // Outside of the .install file we would use drupal_write_record() to
+  // populate the database, but it cannot be used here, so we'll use
+  // db_insert().
+
+  // Add a default entry.
+  $fields = array(
+    'name'    => 'BL Lacertae',
+  );
+  db_insert('phot_arch_spbu_objects')
+    ->fields($fields)
+    ->execute();
+
+  // Add another entry.
+  $fields = array(
+    'name'    => 'OJ 287',
+  );
+  db_insert('phot_arch_spbu_objects')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'name'    => 'S5 0716+71',
+  );
+  db_insert('phot_arch_spbu_objects')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'name'    => '3C 454.3',
+  );
+  db_insert('phot_arch_spbu_objects')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'name'    => '3C 273',
+  );
+  db_insert('phot_arch_spbu_objects')
+    ->fields($fields)
+    ->execute();
+
+  // Fill filters
+  $fields = array(
+    'id'    => '1',
+    'band' => 'B',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '2',
+    'band' => 'V',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '3',
+    'band' => 'Rc',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '4',
+    'band' => 'Ic',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '5',
+    'band' => 'J',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '6',
+    'band' => 'H',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '7',
+    'band' => 'K',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+  $fields = array(
+    'id'    => '8',//FIXME change if statement in phot_arch_spbu_entry_insert(..)
+//of phot_arch_spbu.module if you change this value
+    'band' => 'Pol',
+  );
+  db_insert('phot_arch_spbu_bands')
+    ->fields($fields)
+    ->execute();
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * As in hook_install, there is no need to uninstall schema, Drupal will do it
+ * for us.
+ *
+ * @see hook_uninstall()
+ * @ingroup phot_arch_spbu
+ */
+function phot_arch_spbu_uninstall() {
+  // nothing.
+}
+
+
+/**
+ * Implements hook_schema().
+ *
+ * Defines the database tables used by this module.
+ * Remember that the easiest way to create the code for hook_schema is with
+ * the @link http://drupal.org/project/schema schema module @endlink
+ *
+ * @see hook_schema()
+ * @ingroup phot_arch_spbu
+ */
+function phot_arch_spbu_schema() {
+
+  $schema['phot_arch_spbu_objects'] = array(
+    'description' => 'Stores blazars names and additional info.',
+    'fields' => array(
+      'id'  => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique blazar ID.',
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'Name of the blazar.',
+      ),
+    ),
+    'primary key' => array('id'),
+    'indexes' => array(
+      'name'    => array('name'),
+    ),
+  );
+
+  $schema['phot_arch_spbu_bands'] = array(
+    'description' => 'Stores bandpasses.',
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique band ID.',
+      ),
+      'band' => array(
+        'type' => 'varchar',
+        'length' => 2048,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Bandpass name',
+      )
+    ),
+    'primary key' => array('id'),
+  );
+
+  $schema['phot_arch_spbu_data'] = array(
+    'description' => 'Stores photometry data.',
+    'fields' => array(
+      'creator_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "Creator user's {users}.uid",
+      ),
+      'blazar_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => "Blazar ID from {phot_arch_spbu_objects}.id",
+      ),
+      'jd' => array(
+        'type' => 'float',
+        'size' => 'big',
+        'not null' => TRUE,
+        'description' => 'Julian date of the observation.',
+      ),
+      'band_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => "Blazar ID from {phot_arch_spbu_bands}.id",
+      ),
+      'mag' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Stellar magnitude.',
+      ),
+      'mag_err' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Stellar magnitude error.',
+      ),
+      'tel' => array(
+        'type' => 'varchar',
+        'length' => 20,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Telescope name.',
+      ),
+    ),
+    'foreign keys' => array(
+      'blazar_id' => array(
+        'table'   => 'phot_arch_spbu_objects',
+        'columns' => array('blazar_id' => 'id'),
+      ),
+      'band_id' => array(
+        'table'   => 'phot_arch_spbu_bands',
+        'columns' => array('band_id' => 'id'),
+      ),
+      'creator_id' => array(
+        'table'   => 'users',
+        'columns' => array('creator_id' => 'uid'),
+      ),
+    ),
+    'primary key' => array('jd','band_id','tel'),
+  );
+
+  $schema['phot_arch_spbu_polar'] = array(
+    'description' => 'Stores polarimetry data.',
+    'fields' => array(
+      'id'  => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary Key: Unique data point ID.',
+      ),
+      'creator_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "Creator user's {users}.uid",
+      ),
+      'blazar_id' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => "Blazar ID from {phot_arch_spbu_objects}.id",
+      ),
+      'jd' => array(
+        'type' => 'float',
+        'size' => 'big',
+        'not null' => TRUE,
+        'description' => 'Julian date of the observation.',
+      ),
+      'p' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Stellar magnitude.',
+      ),
+      'p_err' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Stellar magnitude error.',
+      ),
+      'pa' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Stellar magnitude.',
+      ),
+      'pa_err' => array(
+        'type' => 'float',
+        'not null' => TRUE,
+        'description' => 'Stellar magnitude error.',
+      ),
+      'tel' => array(
+        'type' => 'varchar',
+        'length' => 20,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Telescope name.',
+      ),
+    ),
+    'primary key' => array('id'),
+    'indexes' => array(
+      'jd'         => array('jd'),
+      'p'        => array('p'),
+      'p_err'    => array('p_err'),
+      'pa'        => array('pa'),
+      'pa_err'    => array('pa_err'),
+      'tel'        => array('tel'),
+    ),
+    'foreign keys' => array(
+      'blazar_id' => array(
+        'table'   => 'phot_arch_spbu_objects',
+        'columns' => array('blazar_id' => 'id'),
+      ),
+      'creator_id' => array(
+        'table'   => 'users',
+        'columns' => array('creator_id' => 'uid'),
+      ),
+    ),
+  );
+  return $schema;
+}
