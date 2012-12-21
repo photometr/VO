@@ -114,51 +114,6 @@ function phot_arch_spbu_menu() {
 }
 
 /**
- * Just a simple list with other catalogs.
- */
-//function phot_arch_spbu_form_list($form, &$form_state) {
-
-  //return $output;
-//}
-
-
-// function phot_arch_spbu_entry_load($entry = array()) {
-//   // Read all fields from the phot_arch_spbu_data table.
-//   $select = db_select('phot_arch_spbu_data', 'c');
-//   $select->fields('c');
-// 
-//   // Add each field and value as a condition to this query.
-//   foreach ($entry as $field => $value) {
-//     $select->condition($field, $value);
-//   }
-//   // Return the result in object format.
-//   return $select->execute()->fetchAll();
-// }
-// 
-/**
- * Render a list of entries in the database.
- */
-function phot_arch_spbu_get_data() {
-  $output = '';
-
-  // Get all entries in the dbtng_example table.
-  if ($entries = phot_arch_spbu_entry_load()) {
-    $rows = array();
-    foreach ($entries as $entry) {
-      // Sanitize the data before handing it off to the theme layer.
-      $rows[] = array_map('check_plain', (array) $entry);
-    }
-    // Make a table for them.
-    $header = array(t('id'),t('creator_id'),t('blazar_id'),t('jd'), t('band'), t('mag'), t('mag_err'));
-    $output .= theme('table', array('header' => $header, 'rows' => $rows));
-  }
-  else {
-    drupal_set_message(t('No entries have been added yet.'));
-  }
-  return $output;
-}
-
-/**
  * Query to the database to get photometric data for download.
  */
 function phot_arch_spbu_data_load_phot($form, $form_state) {
@@ -172,6 +127,7 @@ function phot_arch_spbu_data_load_phot($form, $form_state) {
 
   // Read all fields from the phot_arch_spbu_data table.
   $select = db_select('phot_arch_spbu_data', 'c');
+  $select->orderBy('jd', 'ASC');
   $select->fields('c')
          ->condition('blazar_id', $blazar_id,'=')
          ->condition('jd', $JDstart,'>=')
@@ -197,6 +153,7 @@ function phot_arch_spbu_data_load_polar($form, $form_state) {
 
   // Read all fields from the phot_arch_spbu_data table.
   $select = db_select('phot_arch_spbu_polar', 'c');
+  $select->orderBy('jd', 'ASC');
   $select->fields('c')
          ->condition('blazar_id', $blazar_id,'=')
          ->condition('jd', $JDstart,'>=')
@@ -247,10 +204,10 @@ function phot_arch_spbu_form_get_ASCII_submit($form, &$form_state) {
       $rows = array();
       foreach ($entries as $entry) {
         $row_el = sprintf("%5.5f ", $entry->jd);
-        $row_el = $row_el.sprintf("%9s ",sprintf("%3.4f ", $entry->p));
-        $row_el = $row_el.sprintf("%8s ",sprintf("%3.4f ", $entry->p_err));
-        $row_el = $row_el.sprintf("%10s ",sprintf("%5.4f ", $entry->pa));
-        $row_el = $row_el.sprintf("%8s ",sprintf("%3.4f ", $entry->pa_err));
+        $row_el = $row_el.sprintf("%9s ",sprintf("%3.3f ", $entry->p));
+        $row_el = $row_el.sprintf("%8s ",sprintf("%3.3f ", $entry->p_err));
+        $row_el = $row_el.sprintf("%10s ",sprintf("%5.3f ", $entry->pa));
+        $row_el = $row_el.sprintf("%8s ",sprintf("%3.3f ", $entry->pa_err));
         $row_el = $row_el.sprintf("%10s\r\n", $entry->tel);
         $rows[] = $row_el;
       }
@@ -271,8 +228,8 @@ function phot_arch_spbu_form_get_ASCII_submit($form, &$form_state) {
       foreach ($entries as $entry) {
         //$variables = get_object_vars($entry);
         $row_el = sprintf("%5.5f ", $entry->jd);
-        $row_el = $row_el.sprintf("%9s ",sprintf("%2.4f ", $entry->mag));
-        $row_el = $row_el.sprintf("%8s ",sprintf("%2.4f ", $entry->mag_err));
+        $row_el = $row_el.sprintf("%9s ",sprintf("%2.3f ", $entry->mag));
+        $row_el = $row_el.sprintf("%8s ",sprintf("%2.3f ", $entry->mag_err));
         $row_el = $row_el.sprintf("%10s\r\n", $entry->tel);
         $rows[] = $row_el;
       }
@@ -537,8 +494,8 @@ function get_plot_code_polar($form, $form_state) {
   $code = $code.'<p>Zoomed X: <span id="zoomedX">False</span><p/>';
   $code = $code.'<p>Zoomed Y: <span id="zoomedY">False</span><p/></div>';
   //$code = $code.'<div id="div_g" style="width:600px; height:300px;"></div>';
-  $code = $code.'<div id="div_gp" style="margin-top:20px; margin-bottom:20px; margin-left:20px; width:600px; height:300px;"></div>';
-  $code = $code.'<div id="div_gpa" style="margin-top:20px; margin-bottom:20px; margin-left:20px; width:600px; height:300px;"></div>';
+  $code = $code.'<div id="div_gp" style="margin-top:20px; margin-bottom:20px; margin-left:20px; width:800px; height:300px;"></div>';
+  $code = $code.'<div id="div_gpa" style="margin-top:20px; margin-bottom:20px; margin-left:20px; width:800px; height:300px;"></div>';
   return $code;
 }
 
@@ -647,91 +604,6 @@ function pa_ajax_link_response($type = 'ajax') {
 }
 
 /**
- * Check if the "band" is already in the DB otherwise insert it
- * returns "id" of the "band" in the "phot_arch_spbu_band" table
- * @param $band
- *   Just a string with a bandpass name
- *
- * @see db_insert()
- */
-// function get_band_id($band){
-//   //FIXME add some handlings of $band like rstrip(" ")
-//   $query = "SELECT id FROM phot_arch_spbu_bands WHERE band = '".$band."'";
-//   $result = db_query($query);
-//   $id = $result->fetchCol();
-//   if (empty($id)){
-//     $ins_query ="INSERT INTO phot_arch_spbu_bands (band) VALUES ('".$band."')";
-//     db_query($ins_query);
-//     $result = db_query($query);
-//     $id = $result->fetchCol();
-//   }
-//   return $id[0];
-// }
-
-/**
-* Check if the JD is already in the photometry table
-*/
-function id_in_table_phot($JD,$band_id,$blazar_id) {
-  $query = "SELECT id FROM phot_arch_spbu_data WHERE jd = '".$JD."'";
-  $query = $query."AND band_id = '".$band_id."' AND blazar_id = '".$blazar_id."'";
-  $result = db_query($query)->fetchCol();
-  if ($result == NULL) return NULL;
-  return $result[0];
-}
-
-/**
-* Check if the JD is already in the polarization table
-*/
-function id_in_table_pol($JD,$blazar_id) {
-  $query = "SELECT id FROM phot_arch_spbu_polar WHERE jd = '".$JD."'";
-  $query = $query." AND blazar_id = '".$blazar_id."'";
-  $result = db_query($query)->fetchCol();
-  if ($result == NULL) return NULL;
-  return $result[0];
-}
-
-/**
-* Rewrite entry in photometric table for given JD 
-*/
-function rewrite_entry($old_entry_id, $one_line, $user_id) {
-  $mag     = floatval($one_line[1]);
-  $mag_err = floatval($one_line[2]);
-  $tel     = $one_line[3];
-  $query = "UPDATE phot_arch_spbu_data SET mag = '".$mag;
-  $query = $query."', mag_err = '".$mag_err."', tel = '".$tel;
-  $query = $query."', creator_id = '".$user_id."' WHERE id = '".$old_entry_id."'";
-  try {
-    db_query($query)->execute();
-  }
-  catch (Exception $e) {
-    $trans_value->rollback();
-    drupal_set_message(t('db_insert failed. Message = %message, query= %query',
-      array('%message' => $e->getMessage(), '%query' => $e->query_string)), 'error');
-  }
-  return 0;
-}
-
-/**
-* Rewrite entry in polarimetric table for given JD 
-*/
-function rewrite_entry_pol($old_entry_id,$new_P,$new_P_err,$new_PA,$new_PA_err,$new_tel) {
-  global $user;
-  $query = "UPDATE phot_arch_spbu_polar SET p = '".$new_P;
-  $query = $query."', p_err = '".$new_P_err."', pa = '".$new_PA;
-  $query = $query."', pa_err = '".$new_PA_err."', tel = '".$new_tel;
-  $query = $query."', creator_id = '".$user->uid."' WHERE id = '".$old_entry_id."'";
-  try {
-    db_query($query)->execute();
-  }
-  catch (Exception $e) {
-    $trans_value->rollback();
-    drupal_set_message(t('db_insert failed. Message = %message, query= %query',
-      array('%message' => $e->getMessage(), '%query' => $e->query_string)), 'error');
-  }
-  return 0;
-}
-
-/**
  * Save an entry in the database.
  *
  * The underlying function is db_insert().
@@ -799,24 +671,18 @@ function phot_arch_spbu_entry_insert_phot($entry) {
       drupal_set_message(t('It seems that you give not numeric data.'), 'error');
       return NULL;
     }
-    $old_entry_id = id_in_table_phot($one_line[0],$band_id,$blazar_id);
-    if($old_entry_id != NULL){
-      rewrite_entry($old_entry_id, $one_line, $user->uid);
-      continue;
+
+    $JD[]       = floatval($one_line[0]); //FIXME change it with smart function
+    $mag[]      = floatval($one_line[1]); //FIXME who understands comma as delimeter
+    $mag_err[]  = floatval($one_line[2]);
+    if(count($one_line) == 4) {
+      //only in case of 4 rows tel is the last one
+      $tel[]      = $one_line[3];
     }
     else{
-      $JD[]       = floatval($one_line[0]); //FIXME change it with smart function
-      $mag[]      = floatval($one_line[1]); //FIXME who understands comma as delimeter
-      $mag_err[]  = floatval($one_line[2]);
-      if(count($one_line) == 4) {
-        //only in case of 4 rows tel is the last one
-        $tel[]      = $one_line[3];
-      }
-      else{
-        $tel[]      = "Unknown";
-      }
-      $n_new_rows = $n_new_rows + 1;
+      $tel[]      = "Unknown";
     }
+    $n_new_rows = $n_new_rows + 1;
   }
 
   if($n_new_rows < 1) return NULL;
@@ -824,7 +690,7 @@ function phot_arch_spbu_entry_insert_phot($entry) {
   try {
     //fill data table
     for ( $i = 0; $i < count($JD); $i += 1) {
-        $data_entries[] = array(
+        $data_entry = array(
           'creator_id'  => $user->uid,
           'blazar_id'   => $blazar_id,
           'jd'          => $JD[$i],
@@ -833,20 +699,12 @@ function phot_arch_spbu_entry_insert_phot($entry) {
           'mag_err'     => $mag_err[$i],
           'tel'         => $tel[$i],
         );
+    
+        $query = db_merge('phot_arch_spbu_data')
+                   ->key(array('jd'=>$JD[$i],'blazar_id'=>$blazar_id,'band_id'=>$band_id))
+                   ->fields($data_entry);
+        $query->execute();
     }
-    $query = db_insert('phot_arch_spbu_data')->fields(array(
-                                          'creator_id',
-                                          'blazar_id',
-                                          'jd',
-                                          'band_id',
-                                          'mag',
-                                          'mag_err',
-                                          'tel'
-                                          ));
-    foreach ($data_entries as $data_entry) {
-      $query->values($data_entry);
-    }
-    $query->execute();
   }
   catch (Exception $e) {
     $trans_value->rollback();
@@ -906,24 +764,18 @@ function phot_arch_spbu_entry_insert_phot_from_pol($entry,$IsWithMagErr) {
       }
       $one_line[2] = 999;
     }
-    $old_entry_id = id_in_table_phot($one_line[0],$band_id,$blazar_id);
-    if($old_entry_id != NULL){
-      rewrite_entry($old_entry_id, $one_line, $user->uid);
-      continue;
+
+    $JD[]       = floatval($one_line[0]);
+    $mag[]      = floatval($one_line[1]);
+    $mag_err[]  = floatval($one_line[2]);
+    if(!(is_numeric(end($one_line)))) {//WARNING not safe
+      //only in case of 4 rows tel is the last one
+      $tel[]      = end($one_line);
     }
     else{
-      $JD[]       = floatval($one_line[0]);
-      $mag[]      = floatval($one_line[1]);
-      $mag_err[]  = floatval($one_line[2]);
-      if(!(is_numeric(end($one_line)))) {//WARNING not safe
-        //only in case of 4 rows tel is the last one
-        $tel[]      = end($one_line);
-      }
-      else{
-        $tel[]      = "Unknown";
-      }
-      $n_new_rows = $n_new_rows + 1;
+      $tel[]      = "Unknown";
     }
+    $n_new_rows = $n_new_rows + 1;
   }
 
   if($n_new_rows < 1) return NULL;
@@ -931,7 +783,7 @@ function phot_arch_spbu_entry_insert_phot_from_pol($entry,$IsWithMagErr) {
   try {
     //fill data table
     for ( $i = 0; $i < count($JD); $i += 1) {
-        $data_entries[] = array(
+        $data_entry = array(
           'creator_id'  => $user->uid,
           'blazar_id'   => $blazar_id,
           'jd'          => $JD[$i],
@@ -940,20 +792,12 @@ function phot_arch_spbu_entry_insert_phot_from_pol($entry,$IsWithMagErr) {
           'mag_err'     => $mag_err[$i],
           'tel'         => $tel[$i],
         );
+    
+        $query = db_merge('phot_arch_spbu_data')
+                   ->key(array('jd'=>$JD[$i],'blazar_id'=>$blazar_id,'band_id'=>$band_id))
+                   ->fields($data_entry);
+        $query->execute();
     }
-    $query = db_insert('phot_arch_spbu_data')->fields(array(
-                                          'creator_id',
-                                          'blazar_id',
-                                          'jd',
-                                          'band_id',
-                                          'mag',
-                                          'mag_err',
-                                          'tel'
-                                          ));
-    foreach ($data_entries as $data_entry) {
-      $query->values($data_entry);
-    }
-    $query->execute();
   }
   catch (Exception $e) {
     $trans_value->rollback();
@@ -1092,17 +936,6 @@ function phot_arch_spbu_entry_insert_polar($entry) {
     }
     //ready to write or rewrite
     $JDates  = array_values($JD);//just to prevent warnings
-    $old_entry_id  = id_in_table_pol(end($JDates),$blazar_id);
-    if($old_entry_id != NULL){
-      $cur_JD      = array_pop($JD);
-      $cur_P       = array_pop($P);
-      $cur_P_err   = array_pop($P_err);
-      $cur_PA      = array_pop($PA);
-      $cur_PA_err  = array_pop($PA_err);
-      $cur_tel     = array_pop($tel);
-      rewrite_entry_pol($old_entry_id,$cur_P,$cur_P_err,$cur_PA,$cur_PA_err,$cur_tel);
-      continue;
-    }
     $n_new_rows = $n_new_rows + 1;//WARNING do i really need it
   }
 
@@ -1111,7 +944,7 @@ function phot_arch_spbu_entry_insert_polar($entry) {
   try {
     //fill data table
     for ( $i = 0; $i < count($JD); $i += 1) {
-        $data_entries[] = array(
+        $data_entry = array(
           'creator_id'  => $user->uid,
           'blazar_id'   => $blazar_id,
           'jd'          => $JD[$i],
@@ -1121,21 +954,11 @@ function phot_arch_spbu_entry_insert_polar($entry) {
           'pa_err'      => $PA_err[$i],
           'tel'         => $tel[$i],
         );
+        $query = db_merge('phot_arch_spbu_polar')
+                   ->key(array('jd'=>$JD[$i],'blazar_id'=>$blazar_id))
+                   ->fields($data_entry);
+        $query->execute();
     }
-    $query = db_insert('phot_arch_spbu_polar')->fields(array(
-                                          'creator_id',
-                                          'blazar_id',
-                                          'jd',
-                                          'p',
-                                          'p_err',
-                                          'pa',
-                                          'pa_err',
-                                          'tel'
-                                          ));
-    foreach ($data_entries as $data_entry) {
-      $query->values($data_entry);
-    }
-    $query->execute();
   }
   catch (Exception $e) {
     $trans_value->rollback();
