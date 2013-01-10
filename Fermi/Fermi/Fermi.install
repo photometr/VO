@@ -167,12 +167,12 @@ function Fermi_schema() {
         'description' => 'Prefactor error.',
       ),
       't_start' => array(
-        'type' => 'float',
+        'type' => 'int',
         'not null' => TRUE,
         'description' => 'T_START.',
       ),
       't_stop' => array(
-        'type' => 'float',
+        'type' => 'int',
         'not null' => TRUE,
         'description' => 'T_STOP.',
       ),
