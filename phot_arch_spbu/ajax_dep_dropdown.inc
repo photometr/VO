@@ -67,10 +67,10 @@ function phot_arch_spbu_form_get($form, &$form_state) {
   // second dropdown.
   $selected = isset($form_state['values']['name']) ? $form_state['values']['name'] : key($blazars_names);
 
-  //$form = array(
-  //  '#prefix' => '<div id="main-replace">',
-  //  '#suffix' => '</div>',
-  //);
+  $form['description'] = array(
+    '#markup' => '<div>' . t('Здесь вы можете скачать фотометрические и поляриметрические данные для избранных объектов, которые были получены в лаборатории наблюдательной астрофизики СПбГУ.')
+    . '</div>',
+  );
 
   $form['name_fieldset'] = array(
     '#type' => 'fieldset',

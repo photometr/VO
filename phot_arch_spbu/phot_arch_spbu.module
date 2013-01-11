@@ -34,8 +34,7 @@ function phot_arch_spbu_help($path) {
   $output = '';
   switch ($path) {
     case 'VO/phot_arch_spbu':
-      $output = t('Здесь вы можете скачать фотометрические и поляриметрические данные для избранных объектов, ');
-      $output .= t('которые были получены в лаборатории наблюдательной астрофизики СПбГУ.');
+      $output = t('');
       break;
     case 'VO/phot_arch_spbu/add':
       $output = t('');
