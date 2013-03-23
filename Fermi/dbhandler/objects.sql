@@ -5,3 +5,5 @@ INSERT INTO lacertabase.Fermi_objects (name) VALUES ("Q1611");
 INSERT INTO lacertabase.Fermi_objects (name) VALUES ("PKS1510");
 INSERT INTO lacertabase.Fermi_objects (name) VALUES ("3C 66A");
 INSERT INTO lacertabase.Fermi_objects (name) VALUES ("Mkn421");
+INSERT INTO lacertabase.Fermi_objects (name) VALUES ("PKS1222");
+INSERT INTO lacertabase.Fermi_objects (name) VALUES ("PKS2131");
